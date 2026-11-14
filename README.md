@@ -1,0 +1,53 @@
+# Action / LSC Smart Connect → ESPHome (sans cloud)
+
+Procédure **reproduite sur une prise Action/LSC 3202088.1** pour remplacer Tuya par ESPHome et piloter l'appareil en local avec Home Assistant, y compris lorsque l'accès Internet est coupé (objectif à vérifier par un test WAN bloqué).
+
+> **État au 14 novembre 2026** : la prise pilote est convertie et exploitable en ESPHome (BK7238, relais, bouton, interface Web, Wi‑Fi). **L'étalonnage BL0937 et le test d'autonomie WAN restent à valider**. Les autres modèles, notamment la multiprise, **ne sont pas encore convertis**. Ne pas flasher un modèle sur la seule ressemblance commerciale.
+
+## Matériel et statut
+
+| Appareil | Référence commerciale | Identification | Statut |
+| --- | --- | --- | --- |
+| Prise avec mesure, pilote | Action **3202088.1** / LSC **5225000301** / EAN **8712879165972** | **BK7238 confirmé par Kickstart**, module T1-2S-NL concordant avec l'exemplaire documenté ; BL0937 | **Flash UnTuyaOS3 puis ESPHome V7 réussis** ; mesure non étalonnée |
+| Autre prise avec mesure | LSC **5225000300** | Puce/révision à relever | **Non testée** |
+| Multiprise « Multiple TV » | LSC **5225000500**, quatre sorties sans compteur | Puce, firmware, GPIO, sécurité à identifier | **À étudier en dernier** |
+
+## Parcours de conversion (une prise à la fois)
+
+1. [Identifier et préparer la prise](docs/01-preparation.md) : relever références, conserver un accès de secours.
+2. [Effectuer la conversion OTA via UnTuyaOS3](docs/02-flash-untuyaos3.md) sur **un matériel compatible confirmé** ; correctif NetworkManager documenté.
+3. [Configurer Kickstart et installer ESPHome](docs/03-kickstart-esphome.md), en conservant le type de carte/partitions BK7238 Tuya.
+4. [Tester le pilotage local sans Internet](docs/04-validation-locale.md) : relais, bouton, Wi‑Fi, Home Assistant, coupures secteur.
+5. [Consulter les incidents et solutions](docs/05-depannage.md) si blocage.
+6. [Préparer la multiprise](docs/06-multiprise.md) **sans injecter le YAML de la prise simple**.
+
+**Pour reproduire les étapes réseau de l'essai historique**, voir [le correctif lié à UnTuyaOS3](patches/README.md). Il concerne précisément la révision amont `14b56c3` du 29/10/2026 et une interface gérée par NetworkManager ; ne pas le réappliquer aveuglément sur les versions futures.
+
+## Configuration ESPHome
+
+Le [firmware V7 archivé](firmware/5225000301/prise-action-test-v7.yaml) est la **base de référence de la prise pilote**, pas un firmware générique prêt à installer sur toutes les prises. Il utilise `bk72xx: board: generic-bk7238-tuya`, relais P24, bouton P26, LED P9/P11 et BL0937 SEL P1, CF P6, CF1 P8. Les secrets sont uniquement des références `!secret`, sans valeurs.
+
+**ATTENTION métrologie** : sous un sèche-cheveux donné pour 1500 W, l'ancienne configuration affichait environ 234,7 V / 2,425 A / 1547 W, ce qui viole `P ≤ U×I`. Les versions ESPHome 2026.10.2 et 2026.11 bêta ne comptent pas de la même manière certaines impulsions très courtes sur BK72xx. Il faut valider avec un **wattmètre indépendant** et des mesures stabilisées, sans correction empirique arbitraire. L'énergie cumulée n'est pas fiable tant que la puissance ne l'est pas.
+
+## Architecture de pilotage local
+
+`Commande HA locale → API ESPHome sur LAN/VLAN IoT → relais`. **Internet, application Tuya et serveurs Tuya ne doivent pas être nécessaires**, une fois la migration effective. Le Wi‑Fi, le routeur/commutateur local et le serveur Home Assistant restent nécessaires au contrôle depuis HA ; le bouton physique doit rester opérationnel sans ces services.
+
+Le réseau IoT peut être dans un VLAN distinct : autoriser les flux nécessaires entre Home Assistant et les prises (en particulier API ESPHome, typiquement TCP 6053, et découverte mDNS si utilisée). Pour prouver l'indépendance réelle, **bloquer le WAN sans couper le LAN** et exécuter la [recette de validation](docs/04-validation-locale.md). Ne pas déplacer Home Assistant vers le VLAN IoT simplement pour contourner un problème de routage.
+
+## Sécurité et limites
+
+- Réseau **230 V** : ne jamais ouvrir, souder ou mesurer une prise sous tension. La procédure Wi‑Fi a été choisie pour éviter l'ouverture. Risque de « brick », perte de garantie ou besoin de récupération série.
+- **Aucune sauvegarde intégrale du firmware d'origine n'avait été obtenue** avant la première conversion OTA. Sauvegarde initiale par UART possible seulement hors tension avec matériel et compétence adaptés.
+- Un changement de carte, de version TuyaOS, de bootloader ou de référence peut rendre l'image inadaptée. Vérifier **chaque prise**, y compris celles d'un même lot.
+- Ne jamais publier `secrets.yaml`, clés locales/API Tuya, identifiants uniques, exports `devices.json`, adresses MAC privées, captures dévoilant des mots de passe ou firmware original propriétaire.
+- Les exemples fournis sont documentaires ; toujours **valider et compiler** localement avant un flash.
+
+## Sources et crédits
+
+- [UnTuyaOS3 (tuya-cloudcutter)](https://github.com/tuya-cloudcutter/UnTuyaOS3), exploit et utilitaire OTA dont dépend la première étape.
+- [ESPHome Kickstart (LibreTiny)](https://github.com/libretiny-eu/esphome-kickstart) et [carte generic-bk7238-tuya](https://docs.libretiny.eu/boards/generic-bk7238-tuya/).
+- [Retour matériel 3202088.1 / même EAN sur Elektroda](https://www.elektroda.com/rtvforum/topic4132679.html).
+- [ESPHome BL0937](https://esphome.io/components/sensor/hlw8012/) et [problème de comptage BK72xx #22391](https://github.com/esphome/esphome/issues/22391).
+
+Projet de documentation communautaire indépendant, non affilié à Action, LSC, Tuya ou ESPHome. Licence du dépôt : [MIT](LICENSE).
