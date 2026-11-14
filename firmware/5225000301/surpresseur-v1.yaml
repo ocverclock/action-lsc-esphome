@@ -1,0 +1,309 @@
+# SURPRESSEUR — adaptation de la configuration V7 issue de la prise pilote, 14/11/2026.
+# Action 3202088.1 / LSC 5225000301, EAN et versions Tuya identiques au pilote.
+# Kickstart confirmé, mais cette adaptation n'est PAS encore compilee ou installee.
+# IMPORTANT : pompe / charge debranchee pendant les essais.
+# AVANT exploitation du moteur : verifier calibre relais, courant de demarrage,
+# role de securite du surpresseur et absence de commutation intempestive.
+# Mesure BL0937 NON etalonnee ; ne pas utiliser kWh / puissance en regulation.
+# Toutes les clefs / mots de passe sont dans secrets.yaml PRIVE.
+
+substitutions:
+  devicename: surpresseur
+  friendly_name: "Surpresseur"
+  # Parametres materiels nominaux de DEMARRAGE : shunt 1 mOhm,
+  # pont de tension de l'ordre de 800 sur la famille LSC comparable.
+  # Ces valeurs ne sont PAS certifiees pour la revision 3202088.1.
+  resistance_shunt: "0.001"
+  rapport_diviseur_tension: "800"
+
+esphome:
+  name: ${devicename}
+  friendly_name: ${friendly_name}
+  comment: "Surpresseur Action/LSC BK7238 - V7 derivee, essais requis"
+  # Selection de la politique de redemarrage restauree de V4.1/V5.
+  # A -100, les composants (GPIO, select) sont deja initialises.
+  on_boot:
+    priority: -100
+    then:
+      - if:
+          condition:
+            lambda: 'return id(mode_redemarrage).current_option() == "Toujours allumé";'
+          then:
+            - switch.turn_on: relais
+          else:
+            - if:
+                condition:
+                  lambda: 'return id(mode_redemarrage).current_option() == "Toujours éteint";'
+                then:
+                  - switch.turn_off: relais
+      # « Dernier état » : aucune action, restauration native du relais.
+      # ATTENTION : avec RESTORE_DEFAULT_OFF, un bref ON au demarrage
+      # demeure possible si le relais etait memorise ON. Charge debranchee.
+
+bk72xx:
+  board: generic-bk7238-tuya
+
+logger:
+  # P11 sert egalement a la LED de connexion : ne pas utiliser l'UART.
+  baud_rate: 0
+  level: INFO
+
+# IMPORTANT : conserver la cle API et le mot de passe OTA actuels.
+# Remplacer les references !secret ci-dessous par celles du YAML existant.
+api:
+  encryption:
+    key: !secret surpresseur_api_key
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+    password: !secret surpresseur_ota_password
+
+wifi:
+  # Conserver les priorites de V6 (ne pas changer de reseau sans demande).
+  fast_connect: false
+  power_save_mode: NONE
+  reboot_timeout: 0s
+  networks:
+    - ssid: !secret wifi_unifi
+      password: !secret wifi_unifi_password
+      priority: 3
+    - ssid: !secret wifi_ssid_IoT
+      password: !secret wifi_password_IoT
+      priority: 4
+    - ssid: !secret wifi_ssid_tenda
+      password: !secret wifi_password_tenda
+      priority: 2
+    - ssid: !secret wifi_ssid2
+      password: !secret wifi_password2
+      priority: 1
+  ap:
+    ssid: "Surpresseur-Secours"
+    password: !secret surpresseur_ap_password
+
+captive_portal:
+
+web_server:
+  port: 80
+  # Protection de l'interface precedemment presente en V4.1/V5.
+  auth:
+    username: admin
+    password: !secret surpresseur_web_password
+
+# P11 : LED de connectivite; P9 : LED associee au relais.
+status_led:
+  pin:
+    number: P11
+    inverted: true
+
+output:
+  - platform: gpio
+    id: led_relais
+    pin:
+      number: P9
+      inverted: true
+
+switch:
+  - platform: gpio
+    id: relais
+    name: "Alimentation"
+    pin: P24
+    restore_mode: RESTORE_DEFAULT_OFF
+    # Dernier etat natif ; le select V7 peut imposer ON ou OFF au boot.
+    on_turn_on:
+      - output.turn_on: led_relais
+    on_turn_off:
+      - output.turn_off: led_relais
+
+binary_sensor:
+  - platform: gpio
+    id: bouton_physique
+    internal: true
+    pin:
+      number: P26
+      mode: INPUT_PULLUP
+      inverted: true
+    filters:
+      - delayed_on: 30ms
+      - delayed_off: 30ms
+    # Restauration V5 : seul l'appui bref pilote le relais.
+    on_click:
+      min_length: 50ms
+      max_length: 1200ms
+      then:
+        - switch.toggle: relais
+  - platform: status
+    name: "Connexion"
+    entity_category: diagnostic
+
+
+select:
+  - platform: template
+    id: mode_redemarrage
+    name: "Comportement après coupure"
+    icon: mdi:power-settings
+    entity_category: config
+    options:
+      - "Dernier état"
+      - "Toujours éteint"
+      - "Toujours allumé"
+    optimistic: true
+    restore_value: true
+    initial_option: "Toujours éteint"
+
+  # Commande ponctuelle : elle ne represente PAS le SSID effectivement connecte.
+  # La vraie connexion est exposee par « Réseau Wi-Fi actif ».
+  - platform: template
+    id: choix_wifi
+    name: "Demander un réseau Wi-Fi"
+    icon: mdi:wifi-cog
+    entity_category: config
+    options:
+      - "Automatique (redémarrer)"
+      - "UniFi"
+      - "IoT"
+      - "Tenda"
+      - "Freebox Plus"
+    optimistic: true
+    restore_value: false
+    initial_option: "Automatique (redémarrer)"
+    set_action:
+      - if:
+          condition:
+            lambda: 'return x == "Automatique (redémarrer)";'
+          then:
+            - button.press: redemarrer_prise
+      - if:
+          condition:
+            lambda: 'return x == "UniFi";'
+          then:
+            - wifi.configure:
+                ssid: !secret wifi_unifi
+                password: !secret wifi_unifi_password
+                save: false
+                timeout: 20s
+                on_error:
+                  - logger.log: "Connexion Wi-Fi UniFi non établie"
+      - if:
+          condition:
+            lambda: 'return x == "IoT";'
+          then:
+            - wifi.configure:
+                ssid: !secret wifi_ssid_IoT
+                password: !secret wifi_password_IoT
+                save: false
+                timeout: 20s
+                on_error:
+                  - logger.log: "Connexion Wi-Fi IoT non établie"
+      - if:
+          condition:
+            lambda: 'return x == "Tenda";'
+          then:
+            - wifi.configure:
+                ssid: !secret wifi_ssid_tenda
+                password: !secret wifi_password_tenda
+                save: false
+                timeout: 20s
+                on_error:
+                  - logger.log: "Connexion Wi-Fi Tenda non établie"
+      - if:
+          condition:
+            lambda: 'return x == "Freebox Plus";'
+          then:
+            - wifi.configure:
+                ssid: !secret wifi_ssid2
+                password: !secret wifi_password2
+                save: false
+                timeout: 20s
+                on_error:
+                  - logger.log: "Connexion Wi-Fi Freebox non établie"
+
+sensor:
+  # HLW8012 est le pilote officiel ESPHome pour le BL0937.
+  # SEL haut = tension ; SEL bas = courant (via inverted: true).
+  # Le pilote bascule SEL automatiquement et ignore le premier
+  # echantillon apres le changement de mode.
+  - platform: hlw8012
+    model: BL0937
+    sel_pin:
+      number: P1
+      inverted: true
+    cf_pin:
+      number: P6
+      inverted: true
+    cf1_pin:
+      number: P8
+      inverted: true
+    current_resistor: ${resistance_shunt}
+    voltage_divider: ${rapport_diviseur_tension}
+    initial_mode: VOLTAGE
+    change_mode_every: 3
+    update_interval: 5s
+    voltage:
+      id: tension
+      name: "Tension"
+      accuracy_decimals: 1
+    current:
+      id: courant
+      name: "Courant"
+      accuracy_decimals: 3
+    power:
+      id: puissance
+      name: "Puissance"
+      accuracy_decimals: 1
+    # Ne pas utiliser l'energie native (remise a zero au demarrage)
+    # comme total persistant; le capteur integration le remplace.
+
+  # Integration W * heures / 1000 = kWh, restauree apres redemarrage.
+  - platform: integration
+    name: "Énergie totale"
+    id: energie_totale
+    sensor: puissance
+    time_unit: h
+    integration_method: trapezoid
+    restore: true
+    unit_of_measurement: kWh
+    accuracy_decimals: 3
+    device_class: energy
+    state_class: total_increasing
+    filters:
+      - multiply: 0.001  # Conversion d'unites Wh -> kWh, PAS calibration.
+
+  - platform: wifi_signal
+    name: "Signal Wi-Fi"
+    entity_category: diagnostic
+    update_interval: 60s
+  - platform: uptime
+    name: "Temps depuis redémarrage"
+    entity_category: diagnostic
+    update_interval: 60s
+
+text_sensor:
+  # Restauration des identifiants et libelles V4.1/V5.
+  - platform: wifi_info
+    ssid:
+      id: wifi_ssid_actuel
+      name: "Réseau Wi-Fi actif"
+      entity_category: diagnostic
+    bssid:
+      id: wifi_bssid_actuel
+      name: "Identifiant radio du point d'accès (BSSID)"
+      entity_category: diagnostic
+    ip_address:
+      name: "Adresse IP Wi-Fi"
+      entity_category: diagnostic
+  - platform: template
+    name: "Point d'accès (nom lisible)"
+    entity_category: diagnostic
+    lambda: |-
+      if (id(wifi_ssid_actuel).has_state()) {
+        return {id(wifi_ssid_actuel).state};
+      }
+      return {std::string("Non connecté")};
+    update_interval: 30s
+
+button:
+  - platform: restart
+    id: redemarrer_prise
+    name: "Redémarrer la prise"
+    entity_category: config
