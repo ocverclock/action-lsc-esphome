@@ -1,0 +1,31 @@
+# Secrets et identifiants privés
+.env
+.env.*
+!.env.example
+**/secrets.yaml
+**/devices.json
+**/tuya-raw.json
+**/snapshot.json
+**/*localkey*
+**/*seckey*
+**/*credentials*
+**/*token*.json
+
+# Firmware et dumps binaires non redistribuables
+**/*.uf2
+**/*.ota.bin
+**/*.ota.ug.bin
+**/*firmware-dump*
+**/*flash-backup*
+**/*.rbl
+
+# Travail local
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.log
+*.bak
+*.orig
+*.rej
+.DS_Store
