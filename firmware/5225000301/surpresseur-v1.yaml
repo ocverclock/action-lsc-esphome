@@ -55,9 +55,11 @@ api:
     key: !secret surpresseur_api_key
   reboot_timeout: 0s
 
+# OTA 2026.9+ : encryption Noise partagee avec la cle de api.encryption.
+# Premier flash via l'interface HTTP Kickstart ; mises a jour suivantes chiffrees.
 ota:
   - platform: esphome
-    password: !secret surpresseur_ota_password
+    encryption:
 
 wifi:
   # Conserver les priorites de V6 (ne pas changer de reseau sans demande).
