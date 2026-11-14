@@ -1,0 +1,40 @@
+diff --git a/scripts/connect.sh b/scripts/connect.sh
+--- a/scripts/connect.sh
++++ b/scripts/connect.sh
+@@ -156,6 +156,8 @@
+     # Note: iw's connect takes no `--` separator.
+     printf 'Connecting...\n'
+     iw dev "$iface" connect -w "$match" || { die "failed to associate with '$match'"; return 1; }
++    # Purge stale address from previous Wi-Fi after the successful association.
++    ip -4 addr flush dev "$iface" || { die "cannot clear stale IPv4 on '$iface'"; return 1; }
+ 
+     # Record the interface and SSID we joined so the caller can scope a later
+     # disconnect to exactly this link (and verify it's still the one connected).
+@@ -178,9 +180,9 @@
+ 
+     if command -v dhclient >/dev/null 2>&1; then
+         dhclient -1 "$iface" >/dev/null 2>&1
+-        # Stop the dhclient daemon but keep the address (-x does not release),
+-        # so it can't renew and rewrite resolv.conf after we restore it.
+-        dhclient -x "$iface" >/dev/null 2>&1
++        # On this NetworkManager host, dhclient -x removed the acquired IPv4.
++        # Keep the lease while transferring; restore-network.sh stops it later.
++        : # do not call dhclient -x before the OTA transfer
+     elif command -v dhcpcd >/dev/null 2>&1; then
+         # -1 one-shot, -p keep the address after exit, --nohook resolv.conf so
+         # dhcpcd never touches DNS at all.
+diff --git a/scripts/restore-network.sh b/scripts/restore-network.sh
+--- a/scripts/restore-network.sh
++++ b/scripts/restore-network.sh
+@@ -40,6 +40,11 @@
+     # NetworkManager is running (connect.sh sets the interface unmanaged for the
+     # run): mark it managed again and reconnect.
+     printf 'Restoring networking on %s (NetworkManager)...\n' "$IFACE"
++    # Stop the temporary DHCP client and clear the device-AP IPv4 first.
++    if command -v dhclient >/dev/null 2>&1; then
++        $SUDO dhclient -x "$IFACE" >/dev/null 2>&1 || true
++    fi
++    $SUDO ip -4 addr flush dev "$IFACE" >/dev/null 2>&1 || true
+     $SUDO nmcli dev set "$IFACE" managed yes >/dev/null 2>&1
+     $SUDO nmcli dev connect "$IFACE" >/dev/null 2>&1
+     sleep 3
