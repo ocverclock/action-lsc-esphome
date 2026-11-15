@@ -20,6 +20,7 @@ Procédure **reproduite sur une prise Action/LSC 3202088.1** pour remplacer Tuya
 4. [Tester le pilotage local sans Internet](docs/04-validation-locale.md) : relais, bouton, Wi‑Fi, Home Assistant, coupures secteur.
 5. [Consulter les incidents et solutions](docs/05-depannage.md) si blocage.
 6. [Préparer la multiprise](docs/06-multiprise.md) **sans injecter le YAML de la prise simple**.
+7. [Préparer le flash série de la multiprise](docs/09-multiprise-uart-esphome.md) : identification CB3S à confirmer, **[YAML candidat 4 voies](firmware/5225000500/multiprise-tv-candidate.yaml)** (pas compilé, ni prêt à flasher sans photo du PCB).
 
 **Pour reproduire les étapes réseau de l'essai historique**, voir [le correctif lié à UnTuyaOS3](patches/README.md). Il concerne précisément la révision amont `14b56c3` du 29/10/2026 et une interface gérée par NetworkManager ; ne pas le réappliquer aveuglément sur les versions futures.
 
