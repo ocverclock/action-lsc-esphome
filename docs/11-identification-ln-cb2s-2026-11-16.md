@@ -117,7 +117,11 @@ PY
 
 **Broches de contrôle :** `CTS` ne sert pas au reset ; certains FT232 exposent aussi `RTS`, qu'un logiciel peut utiliser pour déclencher CEN (optionnel, **uniquement après vérification de la polarité et des niveaux logiques**). Cela n'est pas requis pour une sauvegarde manuelle.
 
-**Ensuite seulement :** retenter une seule lecture avec remise sous tension 3,3 V pendant la phase `Connecting`, ou contact CEN–GND puis relâchement, pour identifier si le problème était le reset.
+**Résultat de diagnostic confirmé le 16/11 :** boucle locale FT232 et fils réussie : réponse exacte `b'CB2S-TEST'`. Le port USB, l'émission TX, la réception RX et les deux fils (jusqu'à leurs extrémités testées) sont fonctionnels ; cela ne teste pas la soudure ni le raccordement au CB2S.
+
+**Prochain essai unique :** reconnecter FT232 TX → CB2S P10/RX1, FT232 RX ← CB2S P11/TX1, GND commun ; **aucun 230 V**, alimentation stabilisée 3,3 V. Démarrer `ltchiptool flash read` avec le CB2S hors tension 3,3 V, puis alimenter le module **au moment où l'outil attend la liaison** (power-cycle au lieu d'appui CEN). Si timeout persiste, ne pas répéter à l'infini : mesurer 3,3 V directement aux points 3V3/GND du CB2S pendant la tentative et vérifier l'emplacement des pads et l'éventuelle interaction de la carte mère avec P10/P11 ; demander une photo des raccordements.
+
+**Alternative après cet essai :** contact CEN–GND bref pendant l'attente, une tentative contrôlée, puis nouveau diagnostic si échec. Ne rien écrire en flash.
 
 ## À compléter avant création du YAML matériel
 
