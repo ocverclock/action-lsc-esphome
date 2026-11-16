@@ -80,16 +80,18 @@ Pour **le garage**, on préfère toujours les GPIO qui n'affectent pas le boot :
 
 | Broche ancien CB2S | GPIO ESP32-C6 choisi | Risque boot / état |
 |---|---|---|
-| **P10 / RX1** | **GPIO15** | **À éviter** : GPIO15 est un **strapping** sélectionnant la source JTAG au reset ; recommander **GPIO18 ou GPIO20** à la place. Le sens électrique RX1/U1 et la tension sont inconnus |
+| **P10 / RX1** | **GPIO18** | **Choix confirmé par l'utilisateur en remplacement de GPIO15**. GPIO18 non-strapping ; sens électrique RX1/U1 et tension inconnus, ne pas activer comme sortie |
 | **P24** | **GPIO0** | GPIO non-strapping, fonction côté carte mère (D5/D6) à identifier |
 | **P26** | **GPIO19** | GPIO non-strapping, circuit `WF-LED` à caractériser |
 | **P6** | **GPIO3** | GPIO non-strapping, signal vers U1 à identifier |
 | **P7** | **GPIO2** | GPIO non-strapping, signal vers U1 à identifier |
 | **P8** | **GPIO1** | GPIO non-strapping, signal vers U1 à identifier |
 
-**Recommandation actuelle :** conserver les cinq GPIO 0/19/3/2/1 et **déplacer P10 de GPIO15 à GPIO18 (ou GPIO20)** si câblage non définitif. **Aucun de ces six signaux n'est activé en YAML V1.** S'ils sont déjà soudés, ne pas alimenter le contrôleur de garage ni motorisation avant avoir caractérisé P10 et les tensions au reset et vérifié l'absence de conflit. Un simple niveau 3,3 V nominal ne garantit pas que le GPIO sera sûr au power-on ou que les entrées de U1 sont en 3,3 V.
+**Attribution confirmée :** conserver les cinq GPIO 0/19/3/2/1 et **P10 sur GPIO18** (GPIO15 abandonné). **Aucun de ces six signaux n'est activé en YAML V1.** S'ils sont déjà soudés, ne pas alimenter le contrôleur de garage ni motorisation avant avoir caractérisé P10 et les tensions au reset et vérifié l'absence de conflit. Un simple niveau 3,3 V nominal ne garantit pas que le GPIO sera sûr au power-on ou que les entrées de U1 sont en 3,3 V.
 
 **Attention :** P10 était historiquement `RX1` du CB2S, susceptible d'être **une entrée** sur l'ancien module ; il faut identifier le **sens** du signal et la tension réelle (U1 peut fonctionner en 5 V). Ne pas le déclarer `output` par défaut. Pour P26 `WF-LED`, confirmer la polarité et le courant de LED avant activation. Les GPIO côté C6 sont candidats physiquement, pas une certitude fonctionnelle.
+
+**Décision utilisateur : P10 → GPIO18.** Cette correction remplace définitivement le choix précédent P10 → GPIO15 dans le câblage projeté.
 
 **Source constructeur :** [ESP32-C6 datasheet — GPIO15 strapping pour source JTAG, GPIO8/9 pour mode boot](https://documentation.espressif.com/esp32-c6_datasheet_en.html), section **Boot Configurations**.
 
