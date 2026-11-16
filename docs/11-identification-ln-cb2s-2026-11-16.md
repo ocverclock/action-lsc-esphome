@@ -150,6 +150,28 @@ Le 16/11, l'utilisateur confirme avoir mesuré **3,3 V sur TX du FT232 au repos*
 
 **Sources :** [Datasheet CB2S Tuya](https://developer.tuya.com/en/docs/iot/cb2s-module-datasheet?id=Kafgfsa2aaypq), [Guide de flash LibreTiny](https://docs.libretiny.eu/boards/cb2s/).
 
+### Photos détaillées de la carte : identification du produit et de la POWER-LED
+
+Le 16/11/2026, l'utilisateur a fourni **cinq photos** de la carte complète, sous plusieurs angles. Conclusions directement étayées par les photos :
+
+- **Carte mère : `KG21WF+RF V2.0`**, contrôleur à deux relais jaunes. Les borniers sont sérigraphiés **ANT / NO / COM / NO / COM / AC-DC** ; ne pas confondre ces entrées et sorties.
+- Deux boutons **`LEARN1` et `LEARN2`**, un cavalier de mode présent, des témoins **`POWER-LED`, `WF-LED`, `RF-LED`** et au moins un contrôleur additionnel à nombreuses broches.
+- Carte Wi-Fi **`LN-CB-2S-V1.0_20230518`** soudée verticalement, composant CB2S avec blindage métallique.
+- La petite LED montrée/nommée par l'utilisateur est **`POWER-LED` située sur la carte mère**, non une LED intégrée au CB2S. Elle ne prouve donc **pas** à elle seule que le microcontrôleur BK7231N est alimenté correctement ou a exécuté son bootloader.
+- Sur la carte mère, une rangée de cinq points distincte est marquée **`CLK`, `DAT`, `RST`, `VCC`, `GND`**. **Ne pas l'utiliser comme UART BK7231N sans établir la continuité :** ces points peuvent concerner un autre circuit de contrôle. Il faut utiliser les points réellement connectés aux **P10/RX1** et **P11/TX1** du CB2S selon le brochage officiel et vérifier l'accessibilité derrière les soudures verticales.
+- **Notice de matériel à la même sérigraphie et géométrie :** [Universal WiFi Smart Garage Door Controller](https://manuals.plus/m/4a79e6199df1d51af21b25aeac2ff4179b9d2c949d7c71236ab71747f31d50e5). Le matériel commercial voisin est décrit comme un **récepteur Wi-Fi + radio 433,92 MHz à deux relais** pour portail/garage. La notice mentionne plusieurs variantes de tension d'alimentation : ne **pas extrapoler la tension admissible de cet exemplaire** sans son étiquette.
+- Le **niveau haut de TX du FT232 a été mesuré à 3,3 V au repos** et la boucle TX/RX du FT232 a réussi ; l'appareil ne répond toujours pas à `ltchiptool`.
+
+**Hypothèse prioritaire à tester :** l'allumage de `POWER-LED` après branchement des fils RX/TX pourrait être lié à une **alimentation parasite de la carte mère par le niveau haut de l'UART**, plutôt qu'à une mise sous tension correcte du CB2S. Ce mécanisme n'est **pas encore prouvé**.
+
+**Test différentiel le plus court, sans flash :**
+1. Vérifier que les borniers **AC-DC** et de sortie relais ne reçoivent **aucune alimentation/charge**.
+2. Couper l'alimentation externe stabilisée 3,3 V du CB2S et observer si `POWER-LED` s'allume lorsque le FT232 est connecté avec masse commune et TX/RX. Si oui : débrancher immédiatement **TX du FT232 vers RX du CB2S** pour voir si la LED s'éteint. Ne pas prolonger le fonctionnement en alimentation parasite.
+3. Avant une autre lecture, mesurer la tension **entre 3V3 et GND directement au module CB2S** avec alimentation stabilisée activée, puis vérifier une **continuité hors tension** des deux fils vers P10/P11 du module. Si l'UART est physiquement relié au contrôleur RF de la carte mère, une interaction/collision reste possible.
+
+**Décision :** pas de `flash write`, pas de cavalier RTS/CTS/CEN improvisé et pas de configuration GPIO ESPHome tant que l'origine des `TimeoutError` n'est pas expliquée.
+
+
 ## À compléter avant création du YAML matériel
 
 - [ ] Appareil exact (modèle, EAN, nom Tuya) relié à la précédente analyse LAN.
