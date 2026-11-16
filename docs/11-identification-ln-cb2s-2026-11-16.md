@@ -410,6 +410,31 @@ La **solution 1** ne nécessite pas de connaître les GPIO historiques du CB2S, 
 **Statut** : autonomie RF *observée par l'utilisateur* ; interface Wi-Fi ESP32-C3 **non raccordée**, durée des impulsions et canaux réels à mesurer ; aucun dump Tuya obtenu. Ce constat réduit l'intérêt de poursuivre les échecs de `ltchiptool`, mais ne justifie pas de relier les sorties de commande sans schéma.
 
 
+## Correction de stratégie — ESP32-C3 en remplacement logique direct du CB2S (16/11/2026)
+
+**Argument utilisateur confirmé :** le CB2S et l'ESP32-C3 Super Mini fonctionnent tous deux avec des **signaux logiques 3,3 V**. Puisque la carte réceptrice RF sait déjà faire fonctionner les relais **sans CB2S**, l'objectif prioritaire est de **remplacer le module Wi-Fi par une interface GPIO/UART équivalente directement sur les signaux logiques déjà utilisés**, en conservant la carte KG21WF+RF V2.0, son MCU et ses étages de puissance.
+
+**Révision du conseil précédent :** la proposition de petit relais à contact sec ajouté en parallèle de CH1/CH2 est une solution de contournement facultative, **pas une nécessité technique**, et ne correspond pas au souhait de l'utilisateur de remplacer le CB2S. Ne pas réintroduire cette proposition comme solution par défaut.
+
+### Précautions électriques, malgré le même 3,3 V
+
+- **Même tension logique ≠ brochage identique** ; il faut mapper chaque pad CB2S vers la **fonction réelle** sur la carte mère, puis choisir des GPIO ESP32-C3 disponibles.
+- **Même tension ≠ même capacité en courant** : Espressif donne des capacités de commande distinctes selon les GPIO et leur mode de sortie. Une entrée de logique CMOS à haute impédance est normalement compatible, mais vérifier la charge, la polarité et les éventuelles sorties en conflit.
+- **Même logique ≠ même protocole** : si U1 dialogue avec le CB2S par UART (Tuya MCU), il faut reproduire les échanges (ou déterminer une entrée logique physique utilisable), pas seulement inverser des niveaux.
+- **Au redémarrage**, GPIO ESP32-C3 initialement en entrée/haute impédance ou avec résistances de rappel et broches de strapping particulières (GPIO2/8/9). Les états sûrs du CH1/CH2 doivent être assurés dans **le circuit et la configuration**, y compris avant l'initialisation ESPHome.
+- **Alimentation** : la carte Super Mini complète peut présenter un appel de courant Wi-Fi différent du module CB2S. Vérifier la régulation 3,3 V disponible, les masses et l'absence d'alimentation USB/externe concurrente. Ne jamais raccorder directement un GPIO 3,3 V à la bobine 5 V du relais.
+- Le CB2S actuellement partiellement isolé de sa carte mère ne doit pas rester une source de conflit sur les GPIO : déposer/isoler réellement les signaux concernés avant liaison avec le C3.
+
+### Séquence de diagnostic désormais prioritaire
+
+1. **Hors tension**, relever quelles broches du CB2S aboutissent à U1 (notamment P10/RX1 et P11/TX1), puis aux entrées de commande des relais, transistors et LED.
+2. Avec récepteur RF autonome et sans moteur raccordé, caractériser CH1 et CH2 (durée d'impulsion, état de repos, déclenchement à la télécommande).
+3. Décider **GPIO logique direct ou protocole série** selon ces preuves, et seulement après réaliser une table **fonction carte mère → GPIO ESP32-C3 Super Mini**.
+4. Tester le C3 **seul sur USB-C** avec un firmware neutre, sorties non actives ; intégrer ensuite les commandes à la carte et vérifier l'absence de déclenchement au boot/Wi-Fi/OTA.
+
+**Références** : [Tuya CB2S datasheet, fonction des broches](https://developer.tuya.com/en/docs/iot/cb2s-module-datasheet?id=Kafgfsa2aaypq) et [Espressif ESP32-C3 datasheet, capacités et états GPIO au reset](https://documentation.espressif.com/esp32-c3_datasheet_en.html).
+
+
 ## À compléter avant création du YAML matériel
 
 - [ ] Appareil exact (modèle, EAN, nom Tuya) relié à la précédente analyse LAN.
