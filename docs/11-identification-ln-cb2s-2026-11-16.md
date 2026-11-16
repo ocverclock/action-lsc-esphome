@@ -75,6 +75,23 @@ wc -c sauvegarde-ln-cb2s-original-{1,2}.bin
 
 L'absence d'un lien UART réussi ne doit pas conduire à forcer le flash, changer au hasard de famille ou mettre sous tension secteur pendant les essais.
 
+
+## Incident initial : échec de liaison UART (16/11/2026)
+
+**Observation utilisateur :** alimentation stabilisée 3,3 V jugée correcte, TX et RX câblés ; plusieurs tentatives de lecture `ltchiptool` ont échoué malgré des contacts CEN–GND. Aucun dump réussi ; **message d'erreur exact non encore fourni**.
+
+**Point clarifié :** `CTS` sur l'adaptateur FT232 est le signal de contrôle de flux série, **pas** le reset de la puce. Ne pas le connecter à CEN, ni chercher à piloter CEN via CTS. Le reset est la broche **CEN du CB2S** reliée brièvement à **GND**.
+
+**Procédure non destructive retenue :**
+1. Confirmer que l'appareil est complètement débranché du **230 V**, et que l'alimentation logique 3,3 V indépendante et le FT232 partagent **GND**, avec **niveaux UART 3,3 V**.
+2. Démarrer la commande de **lecture**, attendre que le programme tente d'établir la liaison (message du type `Connecting` / attente de boot).
+3. Faire un **contact bref** CEN vers GND puis relâcher, sans maintenir le reset ; attendre le résultat. Un repère pratique issu d'autres outils BK72xx est **environ 0,25 seconde** (sans précision stricte).
+4. Alternative souvent plus simple quand le contact CEN échoue : **couper puis remettre l'alimentation stabilisée 3,3 V** pendant que l'outil essaie de se connecter, sans toucher au secteur ni au câblage USB.
+5. Éviter les resets répétés trop rapidement **pendant une négociation déjà commencée**. En cas d'échec persistant, vérifier masse commune, TX/RX croisés, port série libre et réel, tension **sur le module** pendant le reset et stabilité des soudures ; recueillir **les 10 dernières lignes exactes** de l'erreur avant tout nouveau changement.
+6. N'effectuer **aucune écriture** tant que la première lecture de 2 MiB n'a pas fonctionné, puis la seconde lecture identique.
+
+**Références techniques :** [LibreTiny CB2S quick flashing guide](https://docs.libretiny.eu/boards/cb2s/#quick-flashing-guide), [LibreTiny BK72xx flashing, reset CEN et alimentation](https://docs.libretiny.eu/docs/platform/beken-72xx/#flashing), [Guide BK7231GUIFlashTool — alternative reset par coupure/alimentation 3,3 V](https://github.com/openshwprojects/BK7231GUIFlashTool#detailed-usage-instructions-bk72xx).
+
 ## À compléter avant création du YAML matériel
 
 - [ ] Appareil exact (modèle, EAN, nom Tuya) relié à la précédente analyse LAN.
