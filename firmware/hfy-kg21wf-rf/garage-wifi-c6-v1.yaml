@@ -1,0 +1,89 @@
+# HFY-KG21WF+RF V2.0 — remplacement Wi-Fi par ESP32-C6 Super Mini
+# V1 : base de diagnostic uniquement, 16/11/2026.
+# AUCUNE SORTIE GPIO, aucun relais, aucune interaction avec le Holychip U1.
+# Premier flash sur Super Mini ISOLEE en USB-C ; ne pas alimenter la carte garage.
+# Adapter les !secret localement ; ne pas publier les valeurs.
+#
+# ESPHome >= 2026.9 requis pour ota.encryption.
+# La carte esp32-c6-devkitc-1 est le profil usuel de la C6 Super Mini.
+# C6 GPIO4/5/8/9/15 : strapping. GPIO12/13 USB. Aucun GPIO déclaré ici.
+
+# GPIO RÉSERVÉS POUR LA PHASE SUIVANTE (NE PAS ACTIVER EN V1) :
+# Ancien CB2S P6 -> C6 GPIO0 (candidate, fonction inconnue)
+# Ancien CB2S P7 -> C6 GPIO1 (candidate, fonction inconnue)
+# Ancien CB2S P8 -> C6 GPIO2 (candidate, fonction inconnue)
+# Ancien CB2S P24 -> C6 GPIO3 (candidate, liaisons D5/D6 non identifiées)
+# Ancien CB2S P26 -> C6 GPIO14 (candidate WF-LED, polarité non identifiée)
+# IMPORTANT : ne pas souder ces lignes à la carte mère avant vérification
+# du niveau logique U1, de l'état au boot et de l'absence de conflits.
+# Le C6 doit être flashé sur USB seul avant intégration.
+# Nom de device C6 distinct du C3 : si déjà nommé autrement sur HA,
+# conserver le nom déployé pour éviter des doublons dans Home Assistant.
+
+esphome:
+  name: garage-wifi-c6
+  friendly_name: "Garage WiFi C6"
+  comment: "HFY-KG21WF+RF V2.0 - ESP32-C6 Super Mini - diagnostic V1"
+
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: ESP32C6
+  framework:
+    type: esp-idf
+
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret garage_c6_api_key
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+    encryption:
+
+wifi:
+  ssid: !secret wifi_ssid_IoT
+  password: !secret wifi_password_IoT
+  power_save_mode: NONE
+  ap:
+    ssid: "Garage-C6-Secours"
+    password: !secret garage_c6_ap_password
+
+captive_portal:
+
+web_server:
+  port: 80
+  auth:
+    username: admin
+    password: !secret garage_c6_web_password
+
+binary_sensor:
+  - platform: status
+    name: "Connexion"
+    entity_category: diagnostic
+
+sensor:
+  - platform: wifi_signal
+    name: "Signal WiFi"
+    update_interval: 60s
+    entity_category: diagnostic
+  - platform: uptime
+    name: "Temps de fonctionnement"
+    update_interval: 60s
+    entity_category: diagnostic
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "Adresse IP"
+      entity_category: diagnostic
+    ssid:
+      name: "Reseau WiFi"
+      entity_category: diagnostic
+
+button:
+  - platform: restart
+    name: "Redemarrer ESP32"
+    entity_category: diagnostic
