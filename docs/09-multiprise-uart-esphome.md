@@ -1,5 +1,7 @@
 # Multiprise TV (LSC 5225000500) — préparation UART → ESPHome
 
+> **Mise à jour du 16/11/2026 :** ce document conserve l'**historique de préparation UART du 15/11**. Entre-temps, l'exemplaire a été ouvert et son CB3S confirmé ; **deux sauvegardes Tuya identiques** ont été obtenues, le flash série ESPHome puis **l'OTA Wi-Fi ont réussi**. Les relais P14/P6/P7/P8, le bouton P10 et le voyant visible sous le bouton **P23 (pas P11)** ont été testés. La dernière V3 nécessite encore recette après installation. Détails et erreurs de développement dans le [retour d'expérience](10-retour-experience-multiprise-5225000500.md) ; [YAML V3 de référence](../firmware/5225000500/multiprise-tv-selection-p23.yaml). Les étapes ci-dessous sont un **journal historique**, ne pas les lire comme l'état présent du matériel.
+
 **État au 15/11/2026 : code préparé, matériel français encore fermé ou en cours d'ouverture, carte NON confirmée, firmware NON compilé et NON flashé.** Ce document n'autorise aucune mise sous tension d'une carte ouverte.
 
 ## Correspondance documentaire
