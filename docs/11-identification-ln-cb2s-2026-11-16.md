@@ -186,6 +186,19 @@ Le 16/11/2026, l'utilisateur a fourni **cinq photos** de la carte complète, sou
 
 **Aucun flash ni effacement réalisé.**
 
+### Précision utilisateur sur l'isolement de masse
+
+L'utilisateur précise que la déconnexion de **GND entre le CB2S et la carte principale** était **volontaire** : il souhaite alimenter et connecter **uniquement le CB2S** pour réaliser la sauvegarde UART. Ne pas présenter cette action comme une perte accidentelle de masse.
+
+**Schéma voulu (à vérifier électriquement)** :
+- CB2S 3V3 vers +3,3 V de l'alimentation stabilisée ;
+- CB2S GND vers borne négative de l'alimentation stabilisée **et** GND FT232 ;
+- CB2S P10/RX1 ← FT232 TX ; CB2S P11/TX1 → FT232 RX ;
+- CB2S CEN normalement libre, contact bref GND uniquement si reset demandé ;
+- carte mère sans alimentation sur ses borniers AC-DC.
+
+**Réserve importante :** le module reste physiquement soudé à la carte principale sur d'autres broches ; **couper seulement GND n'assure pas une véritable isolation** et peut permettre des retours par GPIO/diodes de protection. Ne pas conseiller de couper d'autres pistes au hasard. Mesurer d'abord la tension réelle entre 3V3 et GND **au niveau du CB2S** ; si elle est correcte et stable, identifier les points UART réels et les liaisons résiduelles avec la carte principale avant d'autres tentatives.
+
 ## À compléter avant création du YAML matériel
 
 - [ ] Appareil exact (modèle, EAN, nom Tuya) relié à la précédente analyse LAN.
