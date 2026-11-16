@@ -248,6 +248,72 @@ L'utilisateur remarque le 16/11 que **les connexions RX1 et TX1 se trouvent sur 
 **Références :** [LibreTiny CB2S, pinout et quick flashing guide](https://docs.libretiny.eu/boards/cb2s/#quick-flashing-guide), [Tuya CB2S, pin definition](https://developer.tuya.com/en/docs/iot/cb2s-module-datasheet?id=Kafgfsa2aaypq).
 
 
+## Étude d'alternative : remplacer le CB2S par un module ESP32-C3 compatible (16/11/2026)
+
+### Identité commerciale retrouvée dans l'inventaire Tuya précédent
+
+- Appareil : **« Relais porte garage »** ;
+- Produit Tuya : **« WIFI&RF smart 2CH switch »** ;
+- Modèle : **HFY-KG21WF+RF** ;
+- `product_id` de **modèle** : `2liqjx62ebuauimx` (ne pas publier de localKey ni d'identifiant unique d'appareil) ;
+- DPs recensés avant ouverture : **1, 2, 9, 10, 41**. Attribution **1/2 aux deux relais probable, mais non vérifiée ici** ; ne pas en déduire les broches GPIO ;
+- Sérigraphie carte : **KG21WF+RF V2.0** ; Wi-Fi vertical CB2S ; deux relais et réception RF indépendante d'apparence.
+- La [notice d'un contrôleur à la même sérigraphie](https://manuals.plus/m/4a79e6199df1d51af21b25aeac2ff4179b9d2c949d7c71236ab71747f31d50e5) montre des boutons LEARN1/2 et deux contacts de relais à sec. Le catalogue liste plusieurs variantes d'**entrée AC/DC**, dont certaines basse tension et d'autres secteur ; **vérifier la plaque réelle** avant alimentation de la carte (ne pas injecter 230 V sur la base d'une notice générale).
+
+### Fonctions de broches standard CB2S (confirmées par Tuya, pas le câblage de KG21WF+RF)
+
+| CB2S pad | Fonction physique | Usage sur KG21WF+RF |
+| --- | --- | --- |
+| 1 : 3V3 | 3,3 V | rail d'alimentation module |
+| 2 : P6 | GPIO | non cartographié |
+| 3 : GND | masse | référence 0 V commune |
+| 4 : P7 | GPIO | non cartographié |
+| 5 : RX1/P10 | UART1 entrée | destination sur carte mère non cartographiée |
+| 6 : P8 | GPIO | non cartographié |
+| 7 : TX1/P11 | UART1 sortie | destination sur carte mère non cartographiée |
+| 8 : ADC/P23 | ADC ou GPIO | non cartographié |
+| 9 : P24 | GPIO | non cartographié |
+| 10 : CEN | enable/reset | commande de reset |
+| 11 : P26 | GPIO | non cartographié |
+
+**On ne sait pas encore** si relais CH1/CH2 sont pilotés directement par les GPIO du CB2S, via un MCU de la carte mère en UART (protocole Tuya MCU) ou par une logique intermédiaire. Les deux boutons LEARN sont probablement gérés au moins partiellement par le circuit RF, mais **cela reste à tester**. Une nouvelle puce n'apporte pas d'emblée le mappage GPIO.
+
+### Modules de remplacement documentés publiquement
+
+- **[ESP8685-WROOM-03-H4](https://templates.blakadder.com/ESP8685-WROOM-03.html)** : module Espressif **famille ESP32-C3**, flash **4 MiB** ; explicitement référencé comme remplaçant de CB2S. Exemple réel de [CB2S remplacé pour ESPHome](https://devices.control-j.com/devices/miboxer-tri-c1wr-dimmer-module/) ; GPIO et protocole à adapter.
+- **[WT32C3-01N](https://templates.blakadder.com/WT32C3-01N.html)** : autre module **ESP32-C3 de remplacement CB2S** cité. Préférer des modules correspondant exactement au **format de pastilles CB2S** ; une carte de développement ESP32-C3 « classique » n'est pas directement compatible mécaniquement.
+- Dans cet exemplaire, le CB2S semble fixé sur une **petite carte verticale `LN-CB-2S-V1.0_20230518`**, elle-même soudée à la carte mère. Vérifier le **support** et les surfaces de soudure avant de déclarer un remplacement `drop-in` sur la carte principale.
+
+**Correspondance *théorique de position de pastilles* CB2S → ESP8685-WROOM-03**, issue de la confrontation des deux *pinouts de module standard* (à vérifier **sur le support** au multimètre avant toute soudure, et non assimilable à un mappage fonctions relais) :
+
+| CB2S | ESP8685-WROOM-03 |
+| --- | --- |
+| 3V3 | 3V3 |
+| P6 | GPIO3 |
+| GND | GND |
+| P7 | GPIO7 |
+| RX1/P10 | RX / GPIO20 |
+| P8 | GPIO6 |
+| TX1/P11 | TX / GPIO21 |
+| ADC/P23 | GPIO1 |
+| P24 | GPIO5 |
+| CEN | EN |
+| P26 | GPIO4 |
+
+**Attention :** cette table suppose la bonne orientation sur une implantation de modules compatibles **CB2S/TYWE2S**, pas un câblage direct des numéros de pin arbitraires d'une carte de développement ESP32-C3. La carte support LN-CB2S peut imposer un adaptateur/reprise de soudures spécifique. Toujours valider les rails 3,3 V/GND et l'absence de court-circuit avant mise sous tension. L'ESP32-C3 doit être **préflashé avant montage** avec un firmware minimal qui laisse les sorties relais en état sûr ; ne pas préprogrammer un GPIO de relais en sortie sans identification et polarité vérifiées.
+
+### Décision prudente
+
+1. **Ne pas sacrifier tout de suite le CB2S** ni continuer à laisser GND du module isolé de la carte mère alors que d'autres GPIO restent connectés : stopper les essais électriques avec isolement partiel non maîtrisé.
+2. Identifier au multimètre hors tension les **connexions réelles** entre broches P6/P7/P8/P23/P24/P26 du CB2S, transistors de commande relais et/ou microcontrôleur principal ; photographier la face des soudures pour tracer les nets. Les points `CLK/DAT/RST/VCC/GND` sur la carte mère ne sont pas démontrés être des ports UART CB2S.
+3. Déterminer si les boutons RF agissent **sans CB2S** ou exigent un retour MCU Wi-Fi ; ne pas supposer que les télécommandes survivront à un échange de module.
+4. Si des relais sont gérés par MCU via UART, choisir firmware ESPHome avec `tuya:` et UART **seulement après identification du protocole et des DP** ; sinon configurer les GPIO directement. Les DPs 1/2 ne désignent pas les broches physiques.
+5. Préparer et **flasher sur banc** un ESP8685-WROOM-03-H4 sans connecter les relais, tester le boot/Wi-Fi/Home Assistant et la compatibilité du courant disponible sur 3,3 V avant de dessouder/installer. La suppression du CB2S sans sauvegarde d'origine rend le retour Tuya difficile.
+6. Tester mécaniquement la fixation verticale, son antenne et sa distance aux autres cartes ; puis recette deux sorties, mode momentané/bistable, sécurité au redémarrage et apprentissage RF, **sans appareil motorisé connecté au premier test**.
+
+**Sources :** [Tuya CB2S pin definition](https://developer.tuya.com/en/docs/iot/cb2s-module-datasheet?id=Kafgfsa2aaypq), [ESP8685-WROOM-03 datasheet HTML](https://documentation.espressif.com/esp8685-wroom-03_datasheet_en.html), [Blakadder ESP8685-WROOM-03](https://templates.blakadder.com/ESP8685-WROOM-03.html), [ESPHome Devices exemple pratique](https://devices.control-j.com/devices/miboxer-tri-c1wr-dimmer-module/).
+
+
 ## À compléter avant création du YAML matériel
 
 - [ ] Appareil exact (modèle, EAN, nom Tuya) relié à la précédente analyse LAN.
