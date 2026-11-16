@@ -435,6 +435,40 @@ La **solution 1** ne nécessite pas de connaître les GPIO historiques du CB2S, 
 **Références** : [Tuya CB2S datasheet, fonction des broches](https://developer.tuya.com/en/docs/iot/cb2s-module-datasheet?id=Kafgfsa2aaypq) et [Espressif ESP32-C3 datasheet, capacités et états GPIO au reset](https://documentation.espressif.com/esp32-c3_datasheet_en.html).
 
 
+## 16/11 — cartographie visuelle avancée des signaux CB2S et identification du MCU
+
+### Observations à la loupe rapportées par l'utilisateur
+
+Sur la carte **KG21WF+RF V2.0** :
+- **P11/TX1** : pas de piste utile observée ; **non utilisé présumé**, **continuité à vérifier**.
+- **P23/ADC** : pas de piste utile observée ; **non utilisé présumé**, continuité à vérifier.
+- **CEN** : pas de connexion fonctionnelle externe observée ; entrée **reset du CB2S**, pas à recopier en GPIO de sortie de l'ESP32-C3.
+- **P26** : rejoint directement la LED **WF-LED** de façade, donc **fonction indicateur Wi-Fi très probable** ; déterminer polarité/éventuelle résistance série avant commande.
+- **P24** : rejoint la zone de **D5 et D6** (diodes en verre visibles à proximité de LEARN1/LEARN2 et du MCU). Leur rôle reste **inconnu** : réseau de diodes de sélection/isolement, ou logique de commande, à confirmer par continuité et sens des diodes ; **ne pas raccorder directement un GPIO ESP32-C3 sans cartographie**.
+- **P6/P7/P8** : les trois pistes semblent partir vers le microcontrôleur de la carte mère, possiblement via les résistances **R4/R11/R5/R8/R18/R19** selon piste à identifier. **Aucune attribution CH1/CH2 n'est encore validée**.
+- Microcontrôleur U1 : l'utilisateur lit **`HC895003A`**, ligne **`2510T`**. L'inscription doit être vérifiée sur une photo rapprochée : recherche documentaire d'une famille proche **`HC89S003A`** (lettre S facilement confondue avec « 5 »), fabricant Holychip/Xinsheng, microcontrôleur 8 bits (datasheet public). **Ne pas assimiler les deux références sans vérification du marquage.** `2510T` pourrait être un code de lot/date ; **non prouvé**.
+
+**Documentation externe :** [CB2S officiel Tuya — P6/P7/P8, P24, P26, CEN](https://developer.tuya.com/en/docs/iot/cb2s-module-datasheet?id=Kafgfsa2aaypq) ; [HC89S003A datasheet (référence ressemblante, non identifiée formellement sur cette carte)](https://datasheet4u.com/datasheet-pdf/Holychip/HC89S003AF4/pdf.php?id=1549524).
+
+### Interprétation technique
+
+La liaison de plusieurs GPIO **P6/P7/P8** vers U1 et la **fonction RF qui continue sans CB2S** privilégient l'hypothèse d'une électronique relais/RF autonome avec **commandes logiques du Wi-Fi vers le MCU**, plutôt qu'un pilotage direct des bobines de relais par CB2S.
+
+Si **TX1/P11** est effectivement non raccordée à U1, un protocole série UART1 Tuya standard sur RX1/TX1 est **moins probable**, sans l'exclure tant que P10/RX1 et les autres pistes ne sont pas cartographiées.
+
+**D5 et D6** pourraient faire de l'isolement/sommation par diodes de commandes distinctes, mais **la photo ne prouve pas leur rôle**. Leur proximité physique de LEARN1/2 ne signifie pas qu'il faut simuler ces boutons : ils peuvent commander **l'apprentissage** plutôt que l'activation des relais.
+
+### Étape suivante : relevé de continuité hors tension
+
+1. Retirer **toutes** les alimentations du PCB, de l'ESP/FT232 et de toute motorisation ; vérifier décharge des condensateurs.
+2. Tester au multimètre **P6 → piste/résistance → broche U1** ; numéroter le point d'arrivée (ou noter résistance et nom sérigraphié). Répéter pour **P7** et **P8**.
+3. Sur **P24**, relever à quelle extrémité de **D5** et **D6** il est connecté, puis leurs autres extrémités ; vérifier la polarité avec le mode **test de diode** sans injecter de signal externe.
+4. Confirmer **P26 → WF-LED**, puis **P11/P23/CEN** non connectés à la carte principale en mode continuité ; « non vu » ≠ « non connecté ».
+5. Établir une **table fonction entrée carte → GPIO ESP32-C3** seulement après ces mesures. Ne pas reproduire des impulsions de commande tant que la fonction CH1/CH2 et l'état sûr au boot ne sont pas démontrés.
+
+**Faits non encore établis :** fonction de P6/P7/P8 et de P24 ; tension **au niveau des entrées U1** ; type (push-pull/open-drain) et polarité de commande ; identité exacte du MCU U1 ; version finale du protocole. Le niveau logique 3,3 V commun des deux modules Wi-Fi ne suffit pas à les rendre directement interchangeables dans un circuit de commande de portail.
+
+
 ## À compléter avant création du YAML matériel
 
 - [ ] Appareil exact (modèle, EAN, nom Tuya) relié à la précédente analyse LAN.
