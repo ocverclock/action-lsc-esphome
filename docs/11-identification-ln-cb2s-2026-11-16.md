@@ -233,6 +233,21 @@ La première hypothèse à contrôler est **une collision ou un biais électriqu
 **Interdit à ce stade :** `flash write`, effacement sans sauvegarde, exposition des clés Tuya, branchement USB/FT232 sur un appareil relié au 230 V.
 
 
+### Observation utilisateur : RX1 et TX1 situés vers le haut de sa carte montée verticalement
+
+L'utilisateur remarque le 16/11 que **les connexions RX1 et TX1 se trouvent sur le haut de sa carte**, d'après son orientation matérielle. Ceci peut expliquer pourquoi les précédents essais ne communiquaient pas, **si les fils avaient été raccordés à d'autres points**. La position « haut » est relative au montage : se fonder sur les étiquettes et la continuité, **pas** sur un repère spatial seul.
+
+**Brochage officiel de la puce/module CB2S Tuya** :
+- **RX1 = P10, pin 5 du CB2S** : à relier au **TX du FT232** ;
+- **TX1 = P11, pin 7 du CB2S** : à relier au **RX du FT232** ;
+- **TX2/RX2** sont des points **distincts** et ne doivent pas servir de remplacement pour la liaison de flash UART1 ;
+- le FT232, l'alimentation 3,3 V et le **GND du CB2S** doivent partager une masse de référence même si certaines connexions avec la carte mère ont été séparées.
+
+**Prochaine action :** couper toutes les alimentations et le FT232, identifier positivement les pastilles **RX1/TX1** réellement présentes sur la carte (en cas de doute : continuité hors tension), reconnecter TX/RX **croisés** à ces seules pastilles, vérifier le 3,3 V au module, puis refaire une **lecture seule** avec `ltchiptool` et reset CEN. Il ne faut pas supposer que la simple identification de la bonne face garantit le succès ; les autres liaisons à la carte mère peuvent encore charger UART1.
+
+**Références :** [LibreTiny CB2S, pinout et quick flashing guide](https://docs.libretiny.eu/boards/cb2s/#quick-flashing-guide), [Tuya CB2S, pin definition](https://developer.tuya.com/en/docs/iot/cb2s-module-datasheet?id=Kafgfsa2aaypq).
+
+
 ## À compléter avant création du YAML matériel
 
 - [ ] Appareil exact (modèle, EAN, nom Tuya) relié à la précédente analyse LAN.
