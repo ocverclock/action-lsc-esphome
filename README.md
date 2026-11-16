@@ -11,7 +11,7 @@ Procédure **reproduite sur une prise Action/LSC 3202088.1** pour remplacer Tuya
 | Prise avec mesure, pilote | Action **3202088.1** / LSC **5225000301** / EAN **8712879165972** | **BK7238 confirmé par Kickstart**, module T1-2S-NL concordant avec l'exemplaire documenté ; BL0937 | **Flash UnTuyaOS3 puis ESPHome V7 réussis** ; mesure non étalonnée |
 | Autre prise avec mesure | LSC **5225000300** | Puce/révision à relever | **Non testée** |
 | Multiprise « Multiple TV » | LSC **5225000500**, quatre sorties sans compteur | **CB3S / BK7231N**, relais P14/P6/P7/P8, bouton P10, voyant P23 vérifiés sur cet exemplaire | **ESPHome flashé, OTA et commandes Web fonctionnels** ; dernières vérifications de la V3 et recette complète à terminer |
-| Relais porte de garage Wi-Fi/RF à 2 canaux | **HFY-KG21WF+RF**, carte **KG21WF+RF V2.0** | **CB2S / BK7231N** monté verticalement, PCB **LN-CB-2S-V1.0_20230518** ; GPIO réels **non cartographiés** | **Lecture UART encore en échec**, aucun dump ; [diagnostic et étude de remplacement par ESP32-C3 Super Mini](docs/11-identification-ln-cb2s-2026-11-16.md) |
+| Relais porte de garage Wi-Fi/RF à 2 canaux | **HFY-KG21WF+RF**, carte **KG21WF+RF V2.0** | **CB2S / BK7231N** monté verticalement, PCB **LN-CB-2S-V1.0_20230518** ; GPIO réels **non cartographiés** | **C6 retenu (connexion Wi-Fi rapportée)** ; UART CB2S non lu, aucun dump ; [identification](docs/11-identification-ln-cb2s-2026-11-16.md), [affectations C6 candidates](docs/15-garage-esp32c6-cablage-gpio.md) |
 
 ## Parcours de conversion (une prise à la fois)
 
@@ -24,7 +24,7 @@ Procédure **reproduite sur une prise Action/LSC 3202088.1** pour remplacer Tuya
 7. [Flash série CB3S : historique et procédure](docs/09-multiprise-uart-esphome.md) ; [retour d’expérience et incidents de développement](docs/10-retour-experience-multiprise-5225000500.md) ; [YAML de référence V3 sans secrets](firmware/5225000500/multiprise-tv-selection-p23.yaml) (**configuration complète encore à éprouver après flash V3**).
 8. [Nouvelle carte LN-CB2S : CB2S confirmé visuellement et plan de sauvegarde UART](docs/11-identification-ln-cb2s-2026-11-16.md). La **référence commerciale** et les GPIO réels restent à confirmer avant tout flash.
 
-**ESP32-C3 Super Mini — mise en service :** [YAML V1 sans aucune commande GPIO](firmware/hfy-kg21wf-rf/garage-wifi-c3-v1.yaml) et [procédure USB-C, Wi-Fi IoT, HA, OTA avant soudure](docs/13-garage-esp32c3-supermini-v1.md). **V1 non validée sur le matériel, aucun relais commandé**.
+**Garage — ESP32-C6 choisi :** l'utilisateur rapporte une connexion Wi-Fi réussie sur C6, contrairement au C3. [YAML ESPHome C6 V1 (aucune sortie GPIO)](firmware/hfy-kg21wf-rf/garage-wifi-c6-v1.yaml) et [table GPIO C6 ↔ CB2S, broches de boot à éviter](docs/15-garage-esp32c6-cablage-gpio.md). Le fichier GitHub C6 **n'a pas été flashé/testé** lui-même ; les signaux vers U1 ne sont pas encore identifiés. Ancienne [V1 C3, conservée comme historique](docs/13-garage-esp32c3-supermini-v1.md).
 
 **U1 de la carte RF/portail :** [identification probable Holychip HC89S003A (TSSOP20), brochage et test DAT/CLK/RST](docs/12-hc89s003a-u1-brochage-et-liaison-esp32c3.md). **Ne pas brancher directement l'ESP32-C3** avant mesure de l'alimentation et des signaux de U1.
 
