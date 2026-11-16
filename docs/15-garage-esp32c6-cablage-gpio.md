@@ -96,6 +96,16 @@ Pour **le garage**, on préfère toujours les GPIO qui n'affectent pas le boot :
 **Source constructeur :** [ESP32-C6 datasheet — GPIO15 strapping pour source JTAG, GPIO8/9 pour mode boot](https://documentation.espressif.com/esp32-c6_datasheet_en.html), section **Boot Configurations**.
 
 
+## 16/11 — V1.1 ESPHome alignée sur le C6 déjà connecté
+
+Le YAML source communiqué par l'utilisateur a été repris à l'identique pour les réglages réseau et d'accès : `esp32.variant: esp32c6` (sans `board` explicite), `wifi.output_power: 11dB`, `!secret garage_c3_api_key`, `!secret garage_c3_web_password`, `!secret wifi_ssid_IoT` et `!secret wifi_password_IoT`. Les noms historiques `garage_c3_*` **restent volontairement inchangés** pour préserver les paramètres secrets déjà fonctionnels. Le nom ESPHome reste `garage-wifi-c6`.
+
+Fichier : [firmware/hfy-kg21wf-rf/garage-wifi-c6-v1.yaml](../firmware/hfy-kg21wf-rf/garage-wifi-c6-v1.yaml).
+
+Les six associations du câblage utilisateur **P10→18, P24→0, P26→19, P6→3, P7→2, P8→1** figurent désormais comme **substitutions** pour la future programmation. Elles **ne sont pas utilisées par un composant ESPHome** : aucun GPIO physique n'est configuré et aucune commande n'est émise.
+
+La ligne `captive_portal:` a été conservée du fichier utilisateur, mais **sans `wifi.ap:` elle ne fournit pas de point d'accès de secours**. Aucun nouveau secret AP n'a été imposé. La V1.1 est archivée et **non compilée/testée par l'assistant** ; seul le firmware C6 actuel de l'utilisateur a été confirmé connecté.
+
 ## Étapes suivantes
 
 1. Vérifier que la carte est bien **ESP32-C6 Super Mini**, et localiser physiquement IO0/1/2/3/14 (pas uniquement selon la photo d'un autre fabricant).
