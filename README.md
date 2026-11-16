@@ -11,7 +11,7 @@ Procédure **reproduite sur une prise Action/LSC 3202088.1** pour remplacer Tuya
 | Prise avec mesure, pilote | Action **3202088.1** / LSC **5225000301** / EAN **8712879165972** | **BK7238 confirmé par Kickstart**, module T1-2S-NL concordant avec l'exemplaire documenté ; BL0937 | **Flash UnTuyaOS3 puis ESPHome V7 réussis** ; mesure non étalonnée |
 | Autre prise avec mesure | LSC **5225000300** | Puce/révision à relever | **Non testée** |
 | Multiprise « Multiple TV » | LSC **5225000500**, quatre sorties sans compteur | **CB3S / BK7231N**, relais P14/P6/P7/P8, bouton P10, voyant P23 vérifiés sur cet exemplaire | **ESPHome flashé, OTA et commandes Web fonctionnels** ; dernières vérifications de la V3 et recette complète à terminer |
-| Relais porte de garage Wi-Fi/RF à 2 canaux | **HFY-KG21WF+RF**, carte **KG21WF+RF V2.0** | **CB2S / BK7231N** monté verticalement, PCB **LN-CB-2S-V1.0_20230518** ; GPIO réels **non cartographiés** | **Lecture UART encore en échec**, aucun dump ; [diagnostic et étude de remplacement ESP8685/ESP32-C3](docs/11-identification-ln-cb2s-2026-11-16.md) |
+| Relais porte de garage Wi-Fi/RF à 2 canaux | **HFY-KG21WF+RF**, carte **KG21WF+RF V2.0** | **CB2S / BK7231N** monté verticalement, PCB **LN-CB-2S-V1.0_20230518** ; GPIO réels **non cartographiés** | **Lecture UART encore en échec**, aucun dump ; [diagnostic et étude de remplacement par ESP32-C3 Super Mini](docs/11-identification-ln-cb2s-2026-11-16.md) |
 
 ## Parcours de conversion (une prise à la fois)
 
