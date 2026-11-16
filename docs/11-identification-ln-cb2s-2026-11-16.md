@@ -385,6 +385,31 @@ L'utilisateur a relevé au dos de la petite carte **`JCYD02 94V-0`**. **Ce marqu
 - **Étape suivante concrète :** relever à l'ohmmètre **où aboutissent RX1/P10 et TX1/P11**, puis au moins les autres pistes CB2S vers U1/transistors. Cela distinguera GPIO directs et communication série.
 
 
+## 16/11/2026 — essai pratique : récepteur RF autonome sans CB2S
+
+**Observation rapportée par l'utilisateur :** lors d'un essai séparé de la carte de réception `KG21WF+RF V2.0`, la télécommande radio reste utilisable **sans le module Wi-Fi CB2S présent**. C'est un résultat matériel qui prime sur les hypothèses précédentes : **la réception radio et au moins la fonction commandée restent opérationnelles sans firmware Tuya**. Le nombre exact de relais effectivement testés, leur état temporisé ou bistable et l'isolement électrique des sorties ne sont pas encore détaillés ; ne pas les marquer « tous deux validés » sans vérification.
+
+### Conséquence sur l'architecture envisagée
+
+**Objectif clarifié :** conserver intacte l'utilisation des télécommandes RF et ajouter avec **ESP32-C3 Super Mini + ESPHome** un second moyen de déclencher à distance le même événement (comme une impulsion de commande), sans réimplémenter le protocole radio ni dépendre du cloud Tuya.
+
+Deux architectures possibles, classées pour l'essai :
+1. **Solution indépendante et peu intrusive :** ajouter une sortie de contact sec, via un **petit relais auxiliaire commandé par l'ESP32-C3** (ou deux si CH1/CH2 sont nécessaires), **en parallèle sur le contact NO/COM correspondant à la sortie d'origine**, seulement si la fonction électromécanique et le branchement aval sont validés. Le récepteur RF et son circuit de relais restent inchangés ; les deux contacts produisent la même fermeture momentanée. Il faut fournir une alimentation adaptée à l'étage relais (une bobine 5 V ne doit jamais être branchée directement à une sortie GPIO 3,3 V).
+2. **Solution intégrée plus compacte, mais à cartographier :** identifier sur le PCB le signal logique que le décodage RF envoie à l'étage de commande, puis utiliser une interface compatible (optocoupleur/transistor correctement dimensionné et référencé) en **commande parallèle câblée**. Ne jamais relier directement au hasard un GPIO ESP32 aux sorties du contrôleur U1 : polarités, tensions et éventuelles sorties push-pull inconnues.
+
+La **solution 1** ne nécessite pas de connaître les GPIO historiques du CB2S, et constitue le prototype le plus isolé et réversible. La **solution 2** peut devenir préférable si le projet privilégie l'encombrement minimal après cartographie.
+
+**Point de vigilance important :** `LEARN1` et `LEARN2` semblent être les boutons d'association RF, **pas** des commandes d'ouverture/fermeture. Ne pas les court-circuiter pour simuler la télécommande avant caractérisation de leur comportement.
+
+**Validation de sécurité :**
+- Vérifier d'abord les **deux sorties séparément** avec le récepteur RF seul, multimètre en continuité ou charge de test adaptée, installation moteur **déconnectée** ; mesurer durée et type d'action (impulsion, maintien, bascule).
+- Déterminer ce que contrôlent réellement **CH1 et CH2** sur le dispositif : ouvrir/fermer, impulsions indépendantes ou deux canaux génériques. Une simple impulsion de portail peut agir en séquence « ouvrir → stopper → fermer » selon l'automate en aval ; ne pas promettre une commande « ouvrir » ou « fermer » dédiée sans retour d'état.
+- Le programme ESPHome doit assurer une **impulsion courte bornée et un état inactif au démarrage**, sans déclenchement intempestif pendant Wi-Fi, OTA, coupure/reprise alimentation.
+- Ne pas faire de tests sous tension sur une carte ouverte reliée au moteur ou au secteur, et **ne pas faire circuler de tension externe depuis la carte moteur vers un GPIO ESP32**.
+
+**Statut** : autonomie RF *observée par l'utilisateur* ; interface Wi-Fi ESP32-C3 **non raccordée**, durée des impulsions et canaux réels à mesurer ; aucun dump Tuya obtenu. Ce constat réduit l'intérêt de poursuivre les échecs de `ltchiptool`, mais ne justifie pas de relier les sorties de commande sans schéma.
+
+
 ## À compléter avant création du YAML matériel
 
 - [ ] Appareil exact (modèle, EAN, nom Tuya) relié à la précédente analyse LAN.
