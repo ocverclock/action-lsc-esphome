@@ -1,0 +1,244 @@
+# HFY-KG21WF+RF V2.0 — ESP32-C6 Super Mini
+# V4 — ESSAIS SUR BANC UNIQUEMENT. NON VALIDE SUR LA CARTE REELLE.
+#
+# NE PAS UTILISER SUR UNE MOTORISATION CONNECTEE.
+# Avant flash et alimentation :
+# - La carte C6 reçoit du 5 V UNIQUEMENT sur la broche 5V, pas 3V3.
+# - Chaque signal de la carte mère doit être mesuré <= 3,3 V / GND.
+# - P7 et P10 sont des ENTREES DE COMMANDE SUPPOSEES de U1,
+#   pas identifiées ni prouvées. Une sortie U1 opposée pourrait provoquer
+#   un conflit électrique. NE PAS ACTIVER tant que ce point n'est pas validé.
+# - Résistances en série (exemple 2,2 kOhm) recommandées sur les liaisons
+#   d'essai P7 et P10 afin de limiter le courant en cas de conflit.
+#   Cela ne rend PAS sûres des lignes à 5 V ou mal identifiées.
+# - Sans validation électrique, conserver l'armement OFF (par défaut).
+# - Les sorties d'essai sont OPEN-DRAIN : repos haute impédance,
+#   impulsion LOW de 100 ms. Jamais de HIGH forcé.
+# - Vérifier l'état des lignes pendant reset, OTA, et coupure alimentation.
+#
+# CABLAGE (ancien CB2S -> nouveau ESP32-C6) :
+# P6 -> GPIO3  : retour RF canal 1, impulsion LOW constatée
+# P8 -> GPIO1  : retour RF canal 2, impulsion LOW constatée
+# P7 -> GPIO2  : commande candidate canal 1, NON vérifiée
+# P10-> GPIO18 : commande candidate canal 2, NON vérifiée
+# P24-> GPIO0  : rôle inconnu, lecture seule
+# P26-> GPIO19 : WF-LED, clignotement à la commande Wi-Fi supposé
+#
+# La sortie LED est supposée ACTIVE BAS. A vérifier par mesure.
+# Aucune automatisation ne réactive l'armement après reboot.
+#
+# Ce firmware doit être validé/compilé dans ESPHome de l'utilisateur ;
+# la réussite du YAML n'est pas une validation du câblage.
+
+substitutions:
+  pulse_duree: 100ms
+  led_flash_duree: 150ms
+
+esphome:
+  name: garage-wifi-c6
+  friendly_name: "Garage WiFi C6"
+  comment: "KG21WF+RF V2.0 - V4 tests uniquement, sorties candidates verrouillees"
+  on_boot:
+    priority: -100
+    then:
+      - output.turn_off: cmd_p7
+      - output.turn_off: cmd_p10
+      - output.turn_off: led_wifi
+      - switch.turn_off: autoriser_essais
+
+esp32:
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret garage_c3_api_key
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+    encryption:
+
+wifi:
+  ssid: !secret wifi_ssid_IoT
+  password: !secret wifi_password_IoT
+  power_save_mode: NONE
+  output_power: 11dB
+
+captive_portal:
+
+web_server:
+  port: 80
+  auth:
+    username: admin
+    password: !secret garage_c3_web_password
+
+# GPIO utilisés en SORTIE pour tests conditionnels :
+# En mode open_drain, OFF libère la ligne, ON la force à LOW.
+output:
+  - platform: gpio
+    id: cmd_p7
+    pin:
+      number: GPIO2
+      inverted: true
+      mode:
+        output: true
+        open_drain: true
+
+  - platform: gpio
+    id: cmd_p10
+    pin:
+      number: GPIO18
+      inverted: true
+      mode:
+        output: true
+        open_drain: true
+
+  - platform: gpio
+    id: led_wifi
+    pin:
+      number: GPIO19
+      inverted: true
+
+# Sécurité logique : OFF à chaque mise sous tension.
+# Ce verrou logiciel ne remplace pas la validation électrique ni
+# une isolation physique de la motorisation.
+switch:
+  - platform: template
+    id: autoriser_essais
+    name: "AUTORISER essais relais (banc uniquement)"
+    entity_category: config
+    icon: mdi:shield-lock-open-outline
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+
+binary_sensor:
+  - platform: status
+    name: "Connexion"
+    entity_category: diagnostic
+
+  - platform: gpio
+    name: "RF canal 1 - P6"
+    id: retour_rf1
+    entity_category: diagnostic
+    pin:
+      number: GPIO3
+      mode:
+        input: true
+        pullup: false
+        pulldown: false
+      inverted: true
+    on_press:
+      - logger.log: "Retour RF1 : impulsion basse sur P6"
+
+  - platform: gpio
+    name: "RF canal 2 - P8"
+    id: retour_rf2
+    entity_category: diagnostic
+    pin:
+      number: GPIO1
+      mode:
+        input: true
+        pullup: false
+        pulldown: false
+      inverted: true
+    on_press:
+      - logger.log: "Retour RF2 : impulsion basse sur P8"
+
+  - platform: gpio
+    name: "P24 - fonction inconnue"
+    entity_category: diagnostic
+    pin:
+      number: GPIO0
+      mode:
+        input: true
+        pullup: false
+        pulldown: false
+
+script:
+  - id: flash_wf_led
+    mode: restart
+    then:
+      - output.turn_on: led_wifi
+      - delay: ${led_flash_duree}
+      - output.turn_off: led_wifi
+
+  # Si une commande est envoyée, elle ne dure jamais plus de 100 ms
+  # en fonctionnement logiciel normal. En cas de panne matérielle,
+  # ce délai ne constitue PAS une sécurité indépendante.
+  - id: essai_p7
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: 'return id(autoriser_essais).state;'
+          then:
+            - logger.log: "TEST commande candidate P7 / GPIO2 : impulsion LOW"
+            - output.turn_on: cmd_p7
+            - delay: ${pulse_duree}
+            - output.turn_off: cmd_p7
+            - script.execute: flash_wf_led
+          else:
+            - logger.log: "TEST P7 refusé : armement OFF"
+
+  - id: essai_p10
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: 'return id(autoriser_essais).state;'
+          then:
+            - logger.log: "TEST commande candidate P10 / GPIO18 : impulsion LOW"
+            - output.turn_on: cmd_p10
+            - delay: ${pulse_duree}
+            - output.turn_off: cmd_p10
+            - script.execute: flash_wf_led
+          else:
+            - logger.log: "TEST P10 refusé : armement OFF"
+
+button:
+  - platform: template
+    name: "TEST commande candidate P7"
+    icon: mdi:gesture-tap-button
+    on_press:
+      - script.execute: essai_p7
+
+  - platform: template
+    name: "TEST commande candidate P10"
+    icon: mdi:gesture-tap-button
+    on_press:
+      - script.execute: essai_p10
+
+  - platform: template
+    name: "TEST WF-LED seule"
+    icon: mdi:led-on
+    on_press:
+      - script.execute: flash_wf_led
+
+  - platform: restart
+    name: "Redemarrer ESP32"
+    entity_category: diagnostic
+
+sensor:
+  - platform: wifi_signal
+    name: "Signal WiFi"
+    update_interval: 60s
+    entity_category: diagnostic
+
+  - platform: uptime
+    name: "Temps de fonctionnement"
+    update_interval: 60s
+    entity_category: diagnostic
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "Adresse IP"
+      entity_category: diagnostic
+    ssid:
+      name: "Reseau WiFi"
+      entity_category: diagnostic
