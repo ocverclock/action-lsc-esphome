@@ -8,17 +8,16 @@
 # La carte esp32-c6-devkitc-1 est le profil usuel de la C6 Super Mini.
 # C6 GPIO4/5/8/9/15 : strapping. GPIO12/13 USB. Aucun GPIO déclaré ici.
 
-# GPIO RÉSERVÉS POUR LA PHASE SUIVANTE (NE PAS ACTIVER EN V1) :
-# Ancien CB2S P6 -> C6 GPIO0 (candidate, fonction inconnue)
-# Ancien CB2S P7 -> C6 GPIO1 (candidate, fonction inconnue)
-# Ancien CB2S P8 -> C6 GPIO2 (candidate, fonction inconnue)
-# Ancien CB2S P24 -> C6 GPIO3 (candidate, liaisons D5/D6 non identifiées)
-# Ancien CB2S P26 -> C6 GPIO14 (candidate WF-LED, polarité non identifiée)
-# IMPORTANT : ne pas souder ces lignes à la carte mère avant vérification
-# du niveau logique U1, de l'état au boot et de l'absence de conflits.
-# Le C6 doit être flashé sur USB seul avant intégration.
-# Nom de device C6 distinct du C3 : si déjà nommé autrement sur HA,
-# conserver le nom déployé pour éviter des doublons dans Home Assistant.
+# CÂBLAGE CHOISI PAR L'UTILISATEUR LE 16/11 — NON ACTIVE EN V1 :
+# P10/RX1 CB2S -> GPIO15 C6 : DECONSEILLE (strap JTAG). Préférer GPIO18/20.
+# P24 CB2S     -> GPIO0 C6  : signal vers D5/D6 à identifier
+# P26 CB2S     -> GPIO19 C6 : WF-LED, polarité à identifier
+# P6 CB2S      -> GPIO3 C6  : signal vers U1 à identifier
+# P7 CB2S      -> GPIO2 C6  : signal vers U1 à identifier
+# P8 CB2S      -> GPIO1 C6  : signal vers U1 à identifier
+# NE PAS DECLARER CES GPIO EN SORTIE, ne pas alimenter la carte garage
+# avant vérification de la tension et du sens des signaux (P10 ancien RX1).
+# Ce YAML est une base NON TESTEE ; conserver le firmware C6 déjà fonctionnel.
 
 esphome:
   name: garage-wifi-c6
