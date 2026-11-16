@@ -13,6 +13,30 @@
 
 **Interprétation officielle Espressif :** `WIFI_REASON_AUTH_EXPIRE` (code 2) : l'authentification expire ou le point d'accès retourne ce motif ; **ce n'est pas une preuve de mot de passe erroné**. [ESP-IDF reason codes](https://docs.espressif.com/projects/esp-idf/en/v5.2/esp32/api-guides/wifi.html).
 
+## Mise à jour : vérifier d'abord la puissance d'émission du C3 Super Mini
+
+**Correction de priorité après recherche publique ciblée (16/11/2026)** : le profil ESPHome `esp32-c3-devkitm-1` **n'est pas manifestement erroné** ; les journaux de l'utilisateur confirment ESP32-C3 rev0.4, app chargée, `setup() finished successfully!`, et scan Wi-Fi opérationnel. La V1 ne définit **aucun GPIO physique** : il n'existe donc pas d'affectation GPIO qui puisse expliquer ces erreurs d'authentification en l'état.
+
+Un [retour d'expérience Home Assistant du 20 août au 1er octobre 2026](https://community.home-assistant.io/t/esp32-c3-super-mini-wi-fi-auth-expired-no-tx-current-spikes-wroom-32d-works-perfectly/1021889) rapporte **exactement `Auth Expired` sur des ESP32-C3 Super Mini**, avec une configuration pourtant opérationnelle sur d'autres ESP32 :
+- L'auteur initial a obtenu une connexion en limitant `wifi.output_power` à **8.5dB** (avec ajout d'un condensateur).
+- Un second utilisateur a comparé les puissances sur Super Mini C3 rev0.4 : **20 dB : 0/10 connexions en redémarrage chaud et échecs à froid** ; **11 dB ou 8,5 dB : 30/30 connexions en démarrage à froid** pour chacun. Ces chiffres sont propres à son matériel et **ne garantissent pas notre résultat**.
+- La présence de points d'accès au scan démontre la réception, **pas** la bonne qualité de l'émission radio ; l'antenne céramique des Super Mini et certains régulateurs/alimentations sont des causes plausibles.
+
+**Nouveau premier test, avant toute modification d'UniFi :** sur le firmware V1 toujours **USB-C seul**, ajouter dans `wifi:` l'unique ligne `output_power: 11dB` et recompiler/flasher par USB :
+
+```yaml
+wifi:
+  ssid: !secret wifi_ssid_IoT
+  password: !secret wifi_password_IoT
+  power_save_mode: NONE
+  output_power: 11dB
+  # conserver le reste du bloc Wi-Fi actuel, notamment AP de secours
+```
+
+Si échec, réessayer à **8.5dB**, puis contrôler câble/source USB, antenne, mot de passe et configuration AP. Tester quelques redémarrages **à froid** si le réseau est obtenu, ainsi qu'à la position finale de la carte (la puissance réduite peut limiter la portée). Ne pas conclure que le réseau UniFi est en cause sans cette comparaison.
+
+**Source de syntaxe :** [ESPHome WiFi output_power](https://esphome.io/components/wifi/). Les profils `esp32-c3-supermini` de tiers et `esp32-c3-devkitm-1` ont tous deux été essayés dans le témoignage ; **changer arbitrairement de board n'est pas le premier correctif**.
+
 ## Hypothèses, non encore vérifiées
 
 1. Paramètres SSID IoT incompatibles avec ce module : WPA2/WPA3 mixte, WPA3, PMF obligatoire, fast roaming (802.11r), 802.11v, band steering ou autre option d'authentification avancée.
