@@ -24,6 +24,8 @@ Procédure **reproduite sur une prise Action/LSC 3202088.1** pour remplacer Tuya
 7. [Flash série CB3S : historique et procédure](docs/09-multiprise-uart-esphome.md) ; [retour d’expérience et incidents de développement](docs/10-retour-experience-multiprise-5225000500.md) ; [YAML de référence V3 sans secrets](firmware/5225000500/multiprise-tv-selection-p23.yaml) (**configuration complète encore à éprouver après flash V3**).
 8. [Nouvelle carte LN-CB2S : CB2S confirmé visuellement et plan de sauvegarde UART](docs/11-identification-ln-cb2s-2026-11-16.md). La **référence commerciale** et les GPIO réels restent à confirmer avant tout flash.
 
+**U1 de la carte RF/portail :** [identification probable Holychip HC89S003A (TSSOP20), brochage et test DAT/CLK/RST](docs/12-hc89s003a-u1-brochage-et-liaison-esp32c3.md). **Ne pas brancher directement l'ESP32-C3** avant mesure de l'alimentation et des signaux de U1.
+
 **Pour reproduire les étapes réseau de l'essai historique**, voir [le correctif lié à UnTuyaOS3](patches/README.md). Il concerne précisément la révision amont `14b56c3` du 29/10/2026 et une interface gérée par NetworkManager ; ne pas le réappliquer aveuglément sur les versions futures.
 
 ## Configuration ESPHome
