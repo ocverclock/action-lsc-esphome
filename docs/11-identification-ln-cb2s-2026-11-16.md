@@ -123,6 +123,20 @@ PY
 
 **Alternative après cet essai :** contact CEN–GND bref pendant l'attente, une tentative contrôlée, puis nouveau diagnostic si échec. Ne rien écrire en flash.
 
+### Nouveau constat : cavalier 5 V / 3,3 V sur FT232
+
+L'utilisateur indique que la lecture `ltchiptool` échoue aussi après mise sous tension 3,3 V au moment de la recherche de connexion. L'adaptateur FT232 dispose d'un **cavalier 5 V / 3,3 V**.
+
+**Important :** le fonctionnement de ce cavalier dépend du schéma de l'adaptateur. Sur plusieurs modules FT232RL, il sélectionne la tension **VCCIO**, donc le niveau haut des signaux logiques TX/RX, et parfois également la tension disponible sur la broche VCC de sortie. On ne peut pas déduire sa fonction exacte sans référence du module ou mesure. Documentation FTDI : https://cdn.sparkfun.com/datasheets/BreakoutBoards/DS_FT232R.pdf
+
+**Contrôle non destructif décidé avant toute nouvelle lecture :**
+1. FT232 connecté à l'USB, cavalier placé sur **3,3 V** ; CB2S **non relié aux signaux TX/RX du FT232** ; secteur absent.
+2. Au multimètre mesurer **FT232 TX → FT232 GND** au repos : **environ 3,3 V** attendu. Si proche de 5 V, **ne pas reconnecter au CB2S** : identifier la carte FT232, la tension VCCIO et le cavalier.
+3. Ne pas relier la **sortie VCC** du FT232 à l'alimentation externe 3,3 V utilisée pour le CB2S ; conserver uniquement le **GND commun** et les signaux TX/RX croisés quand la tension a été validée.
+4. Contrôler ensuite la **tension aux broches 3V3 et GND du CB2S pendant la tentative**, et non seulement à la sortie de l'alimentation stabilisée. Si le diagnostic est encore bloqué, demander une photo nette de la carte et des raccordements, et relever la position du cavalier.
+
+**État :** niveau TX et tension au pied du CB2S non encore mesurés ; ne pas multiplier les resets ni supposer que le niveau logique est bon au seul vu de la boucle locale réussie.
+
 ## À compléter avant création du YAML matériel
 
 - [ ] Appareil exact (modèle, EAN, nom Tuya) relié à la précédente analyse LAN.
