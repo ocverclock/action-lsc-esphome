@@ -1,5 +1,7 @@
 # Phase finale — Multiprise Action / LSC à quatre prises
 
+> **Mise à jour du 16/11/2026 :** les sections datées du 14/11 ci-dessous décrivent le **plan historique avant conversion**. Depuis, la multiprise française 5225000500 est identifiée **CB3S/BK7231N**, sauvegardée en double et **flashée sous ESPHome** ; Wi-Fi/OTA, quatre relais P14/P6/P7/P8, bouton P10 et LED du bouton P23 ont été confirmés. La dernière V3 est annoncée validée dans l'éditeur, mais sa recette après flash et les tests boot/WAN restent à réaliser. Voir [le retour d'expérience actualisé](10-retour-experience-multiprise-5225000500.md) et le [YAML V3 sans secrets](../firmware/5225000500/multiprise-tv-selection-p23.yaml).
+
 **Modèle recensé : LSC 5225000500, « Multiple TV », quatre canaux, sans compteur** (d'après l'inventaire Tuya réalisé le 11 novembre 2026).
 
 **Statut au 14/11/2026 : non convertie.** Les quatre sorties sont exposées comme **DP1, DP2, DP3, DP4 dans Tuya**. Cela **ne permet pas de déduire les broches GPIO, le chipset, les niveaux actifs, ni l'ordre physique** des quatre prises.
