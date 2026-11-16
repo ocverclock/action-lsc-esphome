@@ -32,6 +32,10 @@ Les mots de passe doivent être distincts ; AP secours minimum 8 caractères. Ja
 
 **Compatibilité :** `ota: - platform: esphome; encryption:` nécessite ESPHome **2026.9 ou plus récent**. La clé de chiffrement OTA est la même que `api.encryption.key`. Voir [documentation officielle OTA ESPHome](https://esphome.io/components/ota/esphome/). Si Device Builder est plus ancien, **le mettre à jour** plutôt que de publier une configuration OTA non protégée.
 
+## État de l'essai du 16/11/2026 : firmware installé, connexion Wi-Fi bloquée
+
+Les journaux montrent que **ESPHome 2026.10.2 démarre sur l'ESP32-C3 rev0.4**, mais l'association au SSID UniFi `IoT` échoue avec `Auth Expired`. Cela n'affecte pas le fait que **la V1 ne configure aucun GPIO de sortie**. **Ne pas souder la Super Mini tant que le réseau, l'OTA et Home Assistant ne sont pas validés sur USB-C.** [Diagnostic et contrôles UniFi détaillés](14-garage-c3-auth-expired-unifi-2026-11-16.md).
+
 ## Ordre des opérations
 
 1. **Ne pas souder encore.** Connecter la Super Mini **seule en USB-C** au PC (aucune autre alimentation ni signal raccordé).
