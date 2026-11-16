@@ -1,0 +1,245 @@
+# HFY-KG21WF+RF V2.0 — ESP32-C6 Super Mini
+# V5 : P8/GPIO1 impulsion LOW ponctuelle sur banc, cinq fils restants observes.
+#
+# ATTENTION ALIMENTATION :
+# 5 V seulement sur la broche 5V/VIN de la carte Super Mini,
+# jamais sur 3V3, ni sur un GPIO. Vérifier le 3V3 régulé.
+# Ne jamais brancher USB et alimentation externe ensemble sans
+# vérifier la protection contre le retour de courant.
+#
+# ATTENTION SIGNAUX :
+# - L'ancien CB2S doit être retiré/isolé des six fils.
+# - Vérifier par mesure que CHACUNE des six lignes est comprise
+#   entre 0 V et 3,3 V (GND commun) AVANT de la raccorder à l'ESP.
+# - Ne pas relier le moteur/la motorisation pendant ces essais.
+# - P26/GPIO19 pilote uniquement la LED WF.
+# - P8/GPIO1 est une SORTIE open-drain, à essai ponctuel seulement.
+# - P8 a été observé avec impulsion LOW lors d'un ordre RF canal 2 :
+#   ceci suggère un RETOUR de U1 ; le forcer en LOW peut être dangereux.
+# - ESSAI INTERDIT tant que la ligne n'a pas été vérifiée 0-3,3 V,
+#   et qu'une résistance serie 4,7 kOhm n'a pas été intercalée.
+# - P10, P24, P6 et P7 restent en ENTREE haute impédance.
+# - Les pastilles peuvent être flottantes : une lecture ON/OFF
+#   n'est pas, à elle seule, une preuve de commande ou de protocole.
+#
+# Attribution physique confirmée :
+# CB2S P10/RX1 -> ESP32-C6 GPIO18
+# CB2S P24     -> ESP32-C6 GPIO0
+# CB2S P26     -> ESP32-C6 GPIO19
+# CB2S P6      -> ESP32-C6 GPIO3
+# CB2S P7      -> ESP32-C6 GPIO2
+# CB2S P8      -> ESP32-C6 GPIO1
+
+substitutions:
+  cb2s_p10_gpio: "18"
+  cb2s_p24_gpio: "0"
+  cb2s_p26_gpio: "19"
+  cb2s_p6_gpio: "3"
+  cb2s_p7_gpio: "2"
+  cb2s_p8_gpio: "1"
+
+esphome:
+  name: garage-wifi-c6
+  friendly_name: "Garage WiFi C6"
+  comment: "KG21WF+RF V2.0 - essai impulsion LOW P8 V5"
+  on_boot:
+    priority: -100
+    then:
+      - output.turn_off: impulsion_p8
+      - switch.turn_off: autoriser_test_p8
+
+# Même variante et même framework que le C6 déjà connecté.
+esp32:
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret garage_c3_api_key
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+    encryption:
+
+wifi:
+  ssid: !secret wifi_ssid_IoT
+  password: !secret wifi_password_IoT
+  power_save_mode: NONE
+  output_power: 11dB
+
+# Conserve la configuration actuelle. Sans wifi.ap, pas d'AP de secours.
+captive_portal:
+
+web_server:
+  port: 80
+  auth:
+    username: admin
+    password: !secret garage_c3_web_password
+
+# Lecture uniquement : INPUT, aucune résistance pull-up ou pull-down interne.
+binary_# LED WF : impulsion de 150 ms toutes les 2 s quand le Wi-Fi est connecté.
+# Hypothèse : LED active à l'état BAS, avec résistance série déjà sur la PCB.
+# Si polarité inverse mesurée, passer inverted à false.
+# Ne pas activer si P26 n'est pas relié uniquement au circuit de LED.
+# P8 CB2S -> GPIO1 ESP32-C6 : impulsion active bas de 80 ms,
+# repos haute impédance (open-drain). Même si le signal est observé en
+# RF, on ne sait PAS encore s'il est une entrée du Holychip.
+# Précondition matérielle : résistance série 4,7 kOhm et niveau 0-3,3 V.
+output:
+  - platform: gpio
+    id: impulsion_p8
+    pin:
+      number: GPIO1
+      inverted: true
+      mode:
+        output: true
+        open_drain: true
+
+  - platform: gpio
+    id: led_wifi_sortie
+    pin:
+      number: GPIO19
+      inverted: true
+
+# Verrou manuel, désarmé après chaque redémarrage.
+switch:
+  - platform: template
+    id: autoriser_test_p8
+    name: "AUTORISER test P8 (banc uniquement)"
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    entity_category: config
+
+script:
+  - id: tester_p8
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: 'return id(autoriser_test_p8).state;'
+          then:
+            - logger.log: "TEST P8 : LOW pendant 80 ms puis libération"
+            - output.turn_on: impulsion_p8
+            - delay: 80ms
+            - output.turn_off: impulsion_p8
+          else:
+            - logger.log: "TEST P8 REFUSE : autorisation désactivée"
+
+interval:
+  - interval: 2s
+    then:
+      - if:
+          condition:
+            wifi.connected:
+          then:
+            - output.turn_on: led_wifi_sortie
+            - delay: 150ms
+            - output.turn_off: led_wifi_sortie
+          else:
+            - output.turn_off: led_wifi_sortie
+
+sensor:
+  - platform: status
+    name: "Connexion"
+    entity_category: diagnostic
+
+  - platform: gpio
+    name: "CB2S P10 - GPIO18"
+    entity_category: diagnostic
+    pin:
+      number: GPIO18
+      mode:
+        input: true
+        pullup: false
+        pulldown: false
+    on_press:
+      - logger.log: "P10 / GPIO18 : niveau HAUT"
+    on_release:
+      - logger.log: "P10 / GPIO18 : niveau BAS"
+
+  - platform: gpio
+    name: "CB2S P24 - GPIO0"
+    entity_category: diagnostic
+    pin:
+      number: GPIO0
+      mode:
+        input: true
+        pullup: false
+        pulldown: false
+    on_press:
+      - logger.log: "P24 / GPIO0 : niveau HAUT"
+    on_release:
+      - logger.log: "P24 / GPIO0 : niveau BAS"
+
+  - platform: gpio
+    name: "CB2S P6 - GPIO3"
+    entity_category: diagnostic
+    pin:
+      number: GPIO3
+      mode:
+        input: true
+        pullup: false
+        pulldown: false
+    on_press:
+      - logger.log: "P6 / GPIO3 : niveau HAUT"
+    on_release:
+      - logger.log: "P6 / GPIO3 : niveau BAS"
+
+  - platform: gpio
+    name: "CB2S P7 - GPIO2"
+    entity_category: diagnostic
+    pin:
+      number: GPIO2
+      mode:
+        input: true
+        pullup: false
+        pulldown: false
+    on_press:
+      - logger.log: "P7 / GPIO2 : niveau HAUT"
+    on_release:
+      - logger.log: "P7 / GPIO2 : niveau BAS"
+
+
+sensor:
+  - platform: wifi_signal
+    name: "Signal WiFi"
+    update_interval: 60s
+    entity_category: diagnostic
+
+  - platform: uptime
+    name: "Temps de fonctionnement"
+    update_interval: 60s
+    entity_category: diagnostic
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "Adresse IP"
+      entity_category: diagnostic
+    ssid:
+      name: "Reseau WiFi"
+      entity_category: diagnostic
+
+button:
+  - platform: template
+    name: "TEST P8 - impulsion 80 ms"
+    icon: mdi:gesture-tap-button
+    on_press:
+      - script.execute: tester_p8
+
+  - platform: restart
+    name: "Redemarrer ESP32"
+    entity_category: diagnostic
+
+# CANAUX OBSERVÉS : P6/GPIO3 : impulsion active bas canal RF1.
+# P8/GPIO1 : retour actif bas RF2 observé auparavant ; mode sortie test V5.
+# P7/GPIO2 et P10/GPIO18 : hypothèse d'entrées de commande NON confirmée.
+# PHASE SUIVANTE (hors de ce YAML) :
+# Après identification des signaux P6/P7/P8/P24 :
+# commandes d'essai à impulsion bornée, sorties inactives au boot.
+# Ne pas piloter P10/RX1 comme une sortie sans vérifier le sens.
