@@ -345,6 +345,46 @@ L'utilisateur a relevé au dos de la petite carte **`JCYD02 94V-0`**. **Ce marqu
 **Statut :** compatibilité conceptuelle confirmée ; remplacement **non réalisé**, GPIO des relais/RF inconnus, comportement au démarrage non testé. Les coupures/soudures doivent se faire totalement hors tension, secteur et USB débranchés.
 
 
+## Analyse photographique détaillée de la carte KG21WF+RF V2.0 (16/11/2026)
+
+**Nouvelles vues fournies :** quatre photographies supplémentaires de la **face composants et de la face soudures** (prises des deux orientations). Elles confirment :
+
+| Élément visible | Lecture confirmée sur les photos | Conséquence |
+|---|---|---|
+| Carte mère | `KG21WF+RF V2.0` | Distinguer de la carte fille `LN-CB-2S-V1.0_20230518` |
+| Relais CH1/CH2 | **Deux HUI KE HK4100F-DC5V-SHG**, bobine **5 V DC** (marquage sur le relais) | **Ne jamais alimenter les bobines directement par un GPIO de l'ESP32-C3**. La commande doit passer par l'étage transistor / la logique existante |
+| Sorties | Borniers **CH1 NO/COM** et **CH2 NO/COM** : contacts normalement ouverts et communs | Séparer les contacts secs des circuits basse tension |
+| Entrée | Bornier **IN AC-DC** avec étage de redressement/régulation visible | La valeur nominale admissible d'entrée n'est **pas vérifiée** sur cet exemplaire ; ne pas injecter du 230 V ni supposer que cette borne est du 5 V |
+| Radio | Petit module RF distinct et borne `ANT` | Présence d'une fonction RF séparée ; autonomie des télécommandes **non encore prouvée** |
+| Logique | Circuit **U1 à 28 broches environ**, résistances et plusieurs boîtiers SOT-23 | Probable traitement/commande des deux sorties ; **identité et protocole non relevés** |
+| Test du contrôleur | 5 pastilles **GND / VCC / RST / DAT / CLK** voisines de U1 | **Ne pas traiter comme RX/TX UART** : évoquent un connecteur programmation/test dédié au contrôleur de la carte |
+| Témoins | `POWER-LED`, `RF-LED`, `WF-LED` | `POWER-LED` signale la carte mère, pas nécessairement le démarrage du CB2S |
+| Face soudures | Zone de **rangées de contacts du module vertical** et pistes fines cheminant vers la logique | Photos utiles pour orienter les tests de continuité, **insuffisantes pour attribuer les GPIO exacts** |
+
+### Question d'architecture à résoudre
+
+**Hypothèse A — contrôle direct :** le CB2S utilise des GPIO pour actionner l'étage transistor des deux relais et lire des retours du circuit RF. Un ESP32-C3 Super Mini pourrait remplacer ces fonctions via des GPIO reconfigurés.
+
+**Hypothèse B — MCU principal :** U1 est responsable des relais, des boutons LEARN et de la radio ; le CB2S échange seulement un protocole (UART ou autre) avec U1. Un ESP32-C3 doit alors implémenter **ce protocole**, et non piloter les transistors au hasard. C'est plausible au vu des pistes et de U1, **pas confirmé**.
+
+### Relevé électrique hors tension recommandé
+
+1. **Débrancher toute source** : borne IN AC-DC, USB/FT232, alimentation de laboratoire ; vérifier la décharge des condensateurs.
+2. Au multimètre en **continuité**, relever pour chaque pad **CB2S 3V3/GND/P6/P7/P8/P10(RX1)/P11(TX1)/P23/P24/P26/CEN** la destination sur la carte mère (entrée U1, résistance série, transistor, WF-LED, etc.). **Ne pas faire de test au hasard sur une carte sous tension.**
+3. Repérer quelles pistes passent par une **résistance** : un ohmmètre ne sonnera pas forcément ; la photo et la mesure de résistance complètent le test.
+4. Tracer le signal de commande des deux relais jusqu'aux transistors, **sans confondre l'alimentation bobine 5 V et l'entrée de commande de leur transistor**. On cherche les entrées logiques, pas les contacts NO/COM.
+5. Établir la correspondance avec le connecteur série (RX1/TX1) : continuité vers U1 ? Si oui, étudier le protocole avant tout échange de module.
+6. **Ne pas alimenter la carte de relais depuis l'ESP32-C3 Super Mini** tant que ses rails 3,3 V/5 V, le courant nécessaire et les références de masse ne sont pas identifiés. Programmer et tester le C3 **isolé via USB-C**, puis déterminer l'alimentation finale sans simultanéité de sources non protégée.
+7. Si l'objectif est un remplacement, **retirer ou isoler complètement le CB2S**, plutôt que couper seulement GND en laissant les autres GPIO actifs. Préserver la possibilité de remonter le module ; aucun dump Tuya disponible.
+
+### Décision et limites
+
+- Le choix utilisateur est **ESP32-C3 Super Mini USB-C** ; **ne pas proposer par défaut un ESP8685-WROOM-03**.
+- Les **GPIO3/GPIO4** mentionnés comme exemples sur la Super Mini ne sont **pas** des correspondances de carte validées : **aucune connexion de ces GPIO aux relais n'est autorisée sans mesure**.
+- **Pas de mise sous tension de la motorisation du garage** avant vérification de l'état de chaque sortie au boot/reset/OTA et de la durée d'impulsion.
+- **Étape suivante concrète :** relever à l'ohmmètre **où aboutissent RX1/P10 et TX1/P11**, puis au moins les autres pistes CB2S vers U1/transistors. Cela distinguera GPIO directs et communication série.
+
+
 ## À compléter avant création du YAML matériel
 
 - [ ] Appareil exact (modèle, EAN, nom Tuya) relié à la précédente analyse LAN.
