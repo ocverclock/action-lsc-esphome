@@ -1,32 +1,43 @@
-# HFY-KG21WF+RF V2.0 — remplacement Wi-Fi par ESP32-C6 Super Mini
-# V1 : base de diagnostic uniquement, 16/11/2026.
-# AUCUNE SORTIE GPIO, aucun relais, aucune interaction avec le Holychip U1.
-# Premier flash sur Super Mini ISOLEE en USB-C ; ne pas alimenter la carte garage.
-# Adapter les !secret localement ; ne pas publier les valeurs.
+# HFY-KG21WF+RF V2.0 — ESP32-C6 Super Mini
+# V1.1 — Base fonctionnelle Wi-Fi / Home Assistant / OTA
 #
-# ESPHome >= 2026.9 requis pour ota.encryption.
-# La carte esp32-c6-devkitc-1 est le profil usuel de la C6 Super Mini.
-# C6 GPIO4/5/8/9/15 : strapping. GPIO12/13 USB. Aucun GPIO déclaré ici.
+# Cette version reprend le YAML C6 communiqué par l'utilisateur,
+# sans modifier les secrets existants ni les réglages Wi-Fi en service.
+#
+# CÂBLAGE DEFINI (CB2S -> ESP32-C6) :
+#   P10 / RX1 -> GPIO18
+#   P24       -> GPIO0
+#   P26       -> GPIO19  (WF-LED probable)
+#   P6        -> GPIO3
+#   P7        -> GPIO2
+#   P8        -> GPIO1
+#
+# IMPORTANT :
+# - Les substitutions ci-dessous sont une RESERVATION DOCUMENTAIRE.
+# - AUCUN de ces GPIO n'est configuré en entrée ou sortie dans cette V1.
+# - Ne pas déclarer de sortie ni piloter le portail avant de connaître
+#   le sens, la tension, la polarité et l'état au démarrage des signaux.
+# - L'ancien CB2S doit être isolé pour éviter un conflit électrique.
+# - Vérifier l'alimentation 3,3 V et les masses avant mise sous tension.
+# - Les signaux du Holychip U1 peuvent être à 5 V : à mesurer avant liaison.
 
-# CÂBLAGE CHOISI PAR L'UTILISATEUR LE 16/11 — NON ACTIVE EN V1 :
-# P10/RX1 CB2S -> GPIO18 C6 : attribution confirmée (ancien GPIO15 abandonné).
-# P24 CB2S     -> GPIO0 C6  : signal vers D5/D6 à identifier
-# P26 CB2S     -> GPIO19 C6 : WF-LED, polarité à identifier
-# P6 CB2S      -> GPIO3 C6  : signal vers U1 à identifier
-# P7 CB2S      -> GPIO2 C6  : signal vers U1 à identifier
-# P8 CB2S      -> GPIO1 C6  : signal vers U1 à identifier
-# NE PAS DECLARER CES GPIO EN SORTIE, ne pas alimenter la carte garage
-# avant vérification de la tension et du sens des signaux (P10 ancien RX1).
-# Ce YAML est une base NON TESTEE ; conserver le firmware C6 déjà fonctionnel.
+substitutions:
+  cb2s_p10_gpio: "18"
+  cb2s_p24_gpio: "0"
+  cb2s_p26_gpio: "19"
+  cb2s_p6_gpio: "3"
+  cb2s_p7_gpio: "2"
+  cb2s_p8_gpio: "1"
 
 esphome:
   name: garage-wifi-c6
   friendly_name: "Garage WiFi C6"
-  comment: "HFY-KG21WF+RF V2.0 - ESP32-C6 Super Mini - diagnostic V1"
+  comment: "HFY-KG21WF+RF V2.0 - ESP32-C6 Super Mini - diagnostic V1.1"
 
+# Garde la variante que tu as déjà utilisée avec succès.
+# ESPHome choisit automatiquement une carte générique adaptée au C6.
 esp32:
-  board: esp32-c6-devkitc-1
-  variant: ESP32C6
+  variant: esp32c6
   framework:
     type: esp-idf
 
@@ -35,7 +46,7 @@ logger:
 
 api:
   encryption:
-    key: !secret garage_c6_api_key
+    key: !secret garage_c3_api_key
   reboot_timeout: 0s
 
 ota:
@@ -46,17 +57,17 @@ wifi:
   ssid: !secret wifi_ssid_IoT
   password: !secret wifi_password_IoT
   power_save_mode: NONE
-  ap:
-    ssid: "Garage-C6-Secours"
-    password: !secret garage_c6_ap_password
+  output_power: 11dB
 
+# Conserve la directive de ta base.
+# Sans bloc "wifi.ap", aucun point d'accès de secours n'est défini.
 captive_portal:
 
 web_server:
   port: 80
   auth:
     username: admin
-    password: !secret garage_c6_web_password
+    password: !secret garage_c3_web_password
 
 binary_sensor:
   - platform: status
@@ -68,6 +79,7 @@ sensor:
     name: "Signal WiFi"
     update_interval: 60s
     entity_category: diagnostic
+
   - platform: uptime
     name: "Temps de fonctionnement"
     update_interval: 60s
@@ -86,3 +98,8 @@ button:
   - platform: restart
     name: "Redemarrer ESP32"
     entity_category: diagnostic
+
+# A VENIR (pas encore de composants GPIO ci-dessous) :
+# - Détermination sens et rôle de P10 / P6 / P7 / P8 / P24
+# - Pilotage ou surveillance éventuelle WF-LED / P26
+# - Commandes CH1/CH2 avec durée d'impulsion et sécurité au boot
