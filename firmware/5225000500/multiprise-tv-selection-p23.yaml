@@ -1,0 +1,331 @@
+# Action / LSC 5225000500 - CB3S / BK7231N
+# GPIO relais P14/P6/P7/P8 verifies par essai sur la multiprise.
+# Bouton P10 actif LOW : appui bref fonctionnel confirme.
+# LED SOUS LE BOUTON : P23 actif LOW, confirme par test manuel.
+# P11 n'est pas utilise par cette version.
+# Selection 1 a 4 par bouton unique, LED P23 en retour visuel.
+# NE PAS publier de secrets reels ni de firmware compilé avec ces secrets.
+
+esphome:
+  name: multiprise-tv
+  friendly_name: "Multiprise TV"
+  comment: "LSC CB3S - relais P14/P6/P7/P8, bouton P10, LED P23"
+
+bk72xx:
+  board: cb3s
+
+logger:
+  # P10/P11 = UART1 utilise pour le flash; pas de logs serie apres programmation.
+  baud_rate: 0
+  level: INFO
+
+# ESPHome fonctionne sans HA. L'API ne doit pas forcer des redemarrages
+# lorsque Home Assistant est absent/injoignable.
+api:
+  encryption:
+    key: !secret multiprise_api_key
+  reboot_timeout: 0s
+
+# Les futures mises a jour ESPHome utilisent la meme cle que l'API.
+ota:
+  - platform: esphome
+    encryption:
+
+wifi:
+  ssid: !secret wifi_ssid_IoT
+  password: !secret wifi_password_IoT
+  power_save_mode: NONE
+  reboot_timeout: 0s
+  ap:
+    ssid: Multiprise-TV-Secours
+    password: !secret multiprise_ap_password
+captive_portal:
+
+# Acces local par navigateur SANS Home Assistant ni Internet.
+web_server:
+  port: 80
+  local: true
+  ota: false
+  auth:
+    username: admin
+    password: !secret multiprise_web_password
+    type: digest
+
+# P23 est la LED sous le bouton : ne PAS activer status_led sur P23.
+# Son seul proprietaire GPIO est output: sortie_voyant_general, plus bas.
+
+
+# Court <0,8s : bascule toutes les sorties (normal), ou prise suivante (selection).
+# Long >=2s : entre en selection / valide la prise, SANS attendre le relachement.
+# De 0,8s a 2s : aucune action. Timeout selection : 10s.
+# LED sous bouton P23 : 1/2/3/4 flashes, puis affiche l'etat global.
+
+# Un seul composant pilote P23. P11 est volontairement absent.
+output:
+  - platform: gpio
+    id: sortie_voyant_general
+    pin:
+      number: P23
+      inverted: true
+
+light:
+  - platform: binary
+    id: voyant_general
+    name: "Voyant general"
+    internal: true
+    output: sortie_voyant_general
+    restore_mode: ALWAYS_OFF
+
+globals:
+  - id: mode_selection
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: prise_selectionnee
+    type: int
+    restore_value: no
+    initial_value: '1'
+
+# Les quatre relais P14/P6/P7/P8 ont ete commandes et observes sur cet exemplaire.
+
+# Leur position physique reste a documenter.
+switch:
+  - platform: gpio
+    id: relais_1
+    name: "Sortie 1"
+    pin:
+      number: P14
+      inverted: false
+    restore_mode: ALWAYS_OFF
+
+  - platform: gpio
+    id: relais_2
+    name: "Sortie 2"
+    pin:
+      number: P6
+      inverted: false
+    restore_mode: ALWAYS_OFF
+
+  - platform: gpio
+    id: relais_3
+    name: "Sortie 3"
+    pin:
+      number: P7
+      inverted: false
+    restore_mode: ALWAYS_OFF
+
+  - platform: gpio
+    id: relais_4
+    name: "Sortie 4"
+    pin:
+      number: P8
+      inverted: false
+    restore_mode: ALWAYS_OFF
+
+# Commande explicite pour desactiver logiquement les quatre sorties.
+
+button:
+  - platform: template
+    id: tout_eteindre_web
+    name: "Tout eteindre"
+    icon: mdi:power-off
+    on_press:
+      - switch.turn_off: relais_1
+      - switch.turn_off: relais_2
+      - switch.turn_off: relais_3
+      - switch.turn_off: relais_4
+
+  - platform: restart
+    id: redemarrer_module
+    name: "Redemarrer le module"
+    entity_category: diagnostic
+
+# Scripts declares apres leurs dependances (relais, voyant, variables).
+script:
+  - id: clignotement_selection
+    mode: restart
+    then:
+      # LED potentiellement allumee au depart : extinction franche avant le 1er flash.
+      - light.turn_off: voyant_general
+      - delay: 300ms
+      - while:
+          condition:
+            lambda: 'return id(mode_selection);'
+          then:
+            - repeat:
+                count: !lambda 'return id(prise_selectionnee);'
+                then:
+                  - light.turn_on: voyant_general
+                  - delay: 180ms
+                  - light.turn_off: voyant_general
+                  - delay: 220ms
+            - delay: 900ms
+
+  - id: actualiser_voyant
+    mode: restart
+    then:
+      - if:
+          condition:
+            lambda: 'return !id(mode_selection);'
+          then:
+            - if:
+                condition:
+                  and:
+                    - switch.is_on: relais_1
+                    - switch.is_on: relais_2
+                    - switch.is_on: relais_3
+                    - switch.is_on: relais_4
+                then:
+                  - light.turn_on: voyant_general
+                else:
+                  - light.turn_off: voyant_general
+
+  - id: minuterie_selection
+    mode: restart
+    then:
+      - delay: 10s
+      - lambda: 'id(mode_selection) = false;'
+      - script.stop: clignotement_selection
+      - script.execute: actualiser_voyant
+
+  - id: valider_selection
+    then:
+      - lambda: 'id(mode_selection) = false;'
+      - script.stop: minuterie_selection
+      - script.stop: clignotement_selection
+      - if:
+          condition:
+            lambda: 'return id(prise_selectionnee) == 1;'
+          then:
+            - switch.toggle: relais_1
+      - if:
+          condition:
+            lambda: 'return id(prise_selectionnee) == 2;'
+          then:
+            - switch.toggle: relais_2
+      - if:
+          condition:
+            lambda: 'return id(prise_selectionnee) == 3;'
+          then:
+            - switch.toggle: relais_3
+      - if:
+          condition:
+            lambda: 'return id(prise_selectionnee) == 4;'
+          then:
+            - switch.toggle: relais_4
+      - script.execute: actualiser_voyant
+
+  - id: basculer_toutes_sorties
+    then:
+      - if:
+          condition:
+            or:
+              - switch.is_on: relais_1
+              - switch.is_on: relais_2
+              - switch.is_on: relais_3
+              - switch.is_on: relais_4
+          then:
+            - switch.turn_off: relais_1
+            - switch.turn_off: relais_2
+            - switch.turn_off: relais_3
+            - switch.turn_off: relais_4
+          else:
+            - switch.turn_on: relais_1
+            - switch.turn_on: relais_2
+            - switch.turn_on: relais_3
+            - switch.turn_on: relais_4
+
+  - id: traiter_appui_long
+    mode: restart
+    then:
+      - delay: 2s
+      - if:
+          condition:
+            lambda: 'return id(mode_selection);'
+          then:
+            - script.execute: valider_selection
+          else:
+            - lambda: |-
+                id(mode_selection) = true;
+                id(prise_selectionnee) = 1;
+            - script.execute: minuterie_selection
+            - script.execute: clignotement_selection
+
+binary_sensor:
+  - platform: gpio
+    id: bouton_general
+    name: "Bouton general"
+    pin:
+      number: P10
+      mode:
+        input: true
+        pullup: true
+      inverted: true
+    filters:
+      - delayed_on: 30ms
+      - delayed_off: 30ms
+    # Appui long detecte PENDANT l'appui : reponse LED des 2 s atteintes.
+    on_press:
+      then:
+        # En selection, une pression est une activite : on remet le timeout a 10s.
+        - if:
+            condition:
+              lambda: 'return id(mode_selection);'
+            then:
+              - script.execute: minuterie_selection
+        - script.execute: traiter_appui_long
+
+    on_release:
+      then:
+        - script.stop: traiter_appui_long
+
+    # Appui bref valide uniquement apres relachement.
+    on_click:
+      - min_length: 50ms
+        max_length: 800ms
+        then:
+          - if:
+              condition:
+                lambda: 'return id(mode_selection);'
+              then:
+                - lambda: |-
+                    id(prise_selectionnee) = (id(prise_selectionnee) % 4) + 1;
+                - script.execute: minuterie_selection
+                - script.execute: clignotement_selection
+              else:
+                - script.execute: basculer_toutes_sorties
+
+  - platform: status
+    name: "Connexion API"
+    entity_category: diagnostic
+
+sensor:
+  - platform: wifi_signal
+    name: "Signal Wi-Fi"
+    entity_category: diagnostic
+    update_interval: 60s
+  - platform: uptime
+    name: "Temps depuis redemarrage"
+    entity_category: diagnostic
+    update_interval: 60s
+
+text_sensor:
+  - platform: wifi_info
+    ssid:
+      name: "Reseau Wi-Fi actif"
+      entity_category: diagnostic
+    ip_address:
+      name: "Adresse IP Wi-Fi"
+      entity_category: diagnostic
+
+# Synchronise le voyant en mode normal, y compris les commandes Web/HA.
+# Evite toute reference a un script non encore declare dans les blocs relais.
+# Delai maximal de mise a jour LED en mode normal : 200 ms.
+interval:
+  - interval: 200ms
+    then:
+      - if:
+          condition:
+            lambda: 'return !id(mode_selection);'
+          then:
+            - script.execute: actualiser_voyant
