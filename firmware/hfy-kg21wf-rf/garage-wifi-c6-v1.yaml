@@ -9,7 +9,7 @@
 # C6 GPIO4/5/8/9/15 : strapping. GPIO12/13 USB. Aucun GPIO déclaré ici.
 
 # CÂBLAGE CHOISI PAR L'UTILISATEUR LE 16/11 — NON ACTIVE EN V1 :
-# P10/RX1 CB2S -> GPIO15 C6 : DECONSEILLE (strap JTAG). Préférer GPIO18/20.
+# P10/RX1 CB2S -> GPIO18 C6 : attribution confirmée (ancien GPIO15 abandonné).
 # P24 CB2S     -> GPIO0 C6  : signal vers D5/D6 à identifier
 # P26 CB2S     -> GPIO19 C6 : WF-LED, polarité à identifier
 # P6 CB2S      -> GPIO3 C6  : signal vers U1 à identifier
