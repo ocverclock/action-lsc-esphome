@@ -75,6 +75,19 @@ Nouvelle version expérimentale : [garage-wifi-c6-v5-test-p8.yaml](../firmware/h
 **Cet essai ne doit être utilisé que pour le diagnostic sur banc** ; la réussite ou l'échec ne remplace pas le relevé du schéma logique ni la vérification d'entrée/sortie du Holychip.
 
 
+## Retour utilisateur V5 — l'impulsion sur P8 n'a rien déclenché (16/11/2026)
+
+L'utilisateur rapporte que le test V5 d'impulsion `P8 → GPIO1` ne change rien sur les relais. Il demande ce que le programme a réellement fait.
+
+**Rappel exact du code V5** : `P8/GPIO1` est passé du mode **entrée diagnostique** au mode **sortie open-drain**, à impulsion LOW de **80 ms** puis libération en haute impédance, uniquement lorsque le bouton `TEST P8 - impulsion 80 ms` est pressé **avec le verrou `AUTORISER test P8` ON**. La LED `P26/GPIO19` flashe ensuite, mais **ce flash n'est pas une preuve d'action du relais**. P6/P7/P10/P24 restent en lecture seule. V5 ne pilote **ni P7 ni P10**.
+
+**Résultat connu** : aucun déclenchement de relais rapporté. **Non établi** : si le verrou était ON, si le log `Essai P8 : impulsion LOW pendant 80 ms` est apparu, si le niveau électrique au point P8 a réellement baissé, si la résistance série 4,7 kΩ a été installée. Il ne faut pas assimiler « aucune réaction » à une preuve que l'impulsion est arrivée au MCU.
+
+**Interprétation prioritaire** : P8 et P6 sont peut-être des **sorties de statut du Holychip** lors des commandes radio, pas des entrées de commande. Le test a tenté de reproduire le niveau observé, mais il ne prouve pas que le MCU interprète ce niveau comme une requête. Ne pas continuer à forcer des lignes potentiellement pilotées par U1.
+
+**Étape suivante** : distinguer exécution logicielle et action électrique. Sans nouveau flash ni nouvelle impulsion, regarder dans les journaux de la V5 si le message `Essai P8 : impulsion LOW pendant 80 ms` a été enregistré, ou `Essai P8 bloque : verrou non arme`. Ensuite, **hors tension**, tracer les connexions électriques de P8 et P6 vers U1 et les composants intermédiaires, pour déterminer entrée vs sortie. Si mesure sous tension, alimentation basse tension isolée, moteur déconnecté, sonde adaptée et pas de GPIO au-delà de 3,3 V.
+
+
 ## Essais recommandés, en conservant les relais et le garage hors charge
 
 1. Conserver **GPIO3 en entrée haute impédance**, sans pull-up/down, dans la V2.
