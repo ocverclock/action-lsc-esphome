@@ -314,6 +314,37 @@ L'utilisateur remarque le 16/11 que **les connexions RX1 et TX1 se trouvent sur 
 **Sources :** [Tuya CB2S pin definition](https://developer.tuya.com/en/docs/iot/cb2s-module-datasheet?id=Kafgfsa2aaypq), [ESP8685-WROOM-03 datasheet HTML](https://documentation.espressif.com/esp8685-wroom-03_datasheet_en.html), [Blakadder ESP8685-WROOM-03](https://templates.blakadder.com/ESP8685-WROOM-03.html), [ESPHome Devices exemple pratique](https://devices.control-j.com/devices/miboxer-tri-c1wr-dimmer-module/).
 
 
+## 16/11 — précision : code JCYD02 94V-0 et **ESP32-C3 Super Mini** envisagée
+
+L'utilisateur a relevé au dos de la petite carte **`JCYD02 94V-0`**. **Ce marquage n'identifie pas une EEPROM ni un SoC.** Un rapport de test public attribue la référence de circuit imprimé **JCYD02** à **Shenzhen Jinchuangyida Electronic Co., Ltd**, avec une classification **V-0** selon UL 94/UL 796 ; `94V-0` désigne la **classe d'inflammabilité du support PCB**, pas un firmware ni un pinout. Le fait de lire ce code sur l'exemplaire ne démontre pas à lui seul quel circuit électronique est installé. [Rapport citant JCYD02](https://img.yfisher.com/m0/1679645946780-pe-1000-pse.pdf) ; [définition UL 94 V-0](https://svtronics.com/wp-content/uploads/2025/09/PCB_Basics_for_Buyers-Final.pdf).
+
+**Correction de notre proposition de remplacement :** l'utilisateur souhaite employer **une carte de développement ESP32-C3 Super Mini**, **pas** le module ESP8685-WROOM-03-H4 proposé précédemment. Le Super Mini est une **carte complète USB-C avec régulateur** et un brochage de type header 2×8 ; elle **n'est pas compatible mécaniquement ni broche à broche** avec le module Tuya CB2S. La proposition d'ESP8685 plus haut demeure une *alternative d'étude*, mais **n'est pas la solution voulue ici**.
+
+### Broches accessibles typiques d'un ESP32-C3 Super Mini
+
+- Puissance : `5V`, `GND`, `3V3` ;
+- GPIO accessibles : **0 à 10, 20 (UART RX) et 21 (UART TX)** ;
+- **GPIO2, GPIO8, GPIO9** : strapping de démarrage, à éviter sur relais tant que les niveaux de démarrage ne sont pas maîtrisés ; GPIO8 porte souvent une LED, GPIO9 le bouton BOOT ;
+- **GPIO18 et GPIO19** : USB natif, généralement **non exposés** sur le connecteur 2×8 ;
+- Niveaux des entrées/sorties **3,3 V uniquement**, jamais brancher directement une commande 5 V/12 V/secteur aux GPIO.
+
+**Alimentation :** sur beaucoup de Super Mini, la broche `3V3` est le rail derrière le régulateur et peut être utilisée pour une source **3,3 V régulée correctement dimensionnée** sur un montage qui le permet ; il faut contrôler la révision exacte de la carte et empêcher l'alimentation simultanée via USB et externe sans gestion de retour de courant. La broche `5V` n'est pas une entrée 3,3 V. Pour le premier flash ESPHome, privilégier **USB-C seul**, Super Mini déconnectée de toute électronique de relais.
+
+### Méthode de conversion retenue pour HFY-KG21WF+RF
+
+1. **Arrêter les essais de lecture du CB2S** en isolement partiel dangereux (GND coupé mais autres signaux encore soudés), jusqu'à maîtrise du câblage. Ne plus traiter cette panne de lecture comme un obstacle absolu à l'architecture de remplacement, mais conserver que le firmware original **n'est pas sauvegardé**.
+2. **Relever le câblage réel** de la carte KG21WF+RF au multimètre **hors tension** : P6/P7/P8/P23/P24/P26/RX1/TX1 vers relais, transistors de puissance, LED Wi-Fi, MCU/RF et boutons. Les contacts NO/COM ne sont pas des entrées GPIO.
+3. Distinguer commande GPIO directe des relais **via leur étage transistor** d'un éventuel **protocole UART Tuya MCU** ; le composant 16 broches et la carte RF imposent de ne pas affirmer l'architecture sans traçage.
+4. **Préprogrammer ESP32-C3 Super Mini en USB-C** avec ESPHome, sans GPIO de sortie affecté aux relais avant d'avoir déterminé les polarités, et sans activer de moteurs.
+5. Déposer proprement le CB2S (ou assurer une **déconnexion électrique complète et documentée** de ses sorties) avant de raccorder les signaux à la Super Mini. Ne pas laisser deux microcontrôleurs piloter les mêmes lignes ; ne pas compter sur un simple retrait de GND pour isoler le module.
+6. Raccorder seulement les **signaux logiques 3,3 V vérifiés** et le GND de référence, avec alimentation dimensionnée, selon une table *fonction carte KG21WF+RF → GPIO ESP32-C3 Super Mini* à créer. **Aucune correspondance de GPIO n'est à inventer à partir du pinout du CB2S.**
+7. Faire une recette sans charge moteur : démarrage sûr, chaque contact sec, retour HA, reconnexion Wi-Fi, coupure/reprise d'alimentation, mode impulsionnel s'il commande un portail, et conservation des fonctions RF si avérées. Ne pas connecter une motorisation tant que les états parasites au boot sont exclus.
+
+**Références :** [brochage ESP32-C3 Super Mini](https://chiptron.eu/pinouts/esp32-c3-super-mini-pinout/), [schéma ESP32-C3 Super Mini](https://smartstream-electronics.co.uk/assets/datasheets/ESP32-C3-SuperMini.pdf), [datasheet officiel Tuya CB2S](https://developer.tuya.com/en/docs/iot/cb2s-module-datasheet?id=Kafgfsa2aaypq).
+
+**Statut :** compatibilité conceptuelle confirmée ; remplacement **non réalisé**, GPIO des relais/RF inconnus, comportement au démarrage non testé. Les coupures/soudures doivent se faire totalement hors tension, secteur et USB débranchés.
+
+
 ## À compléter avant création du YAML matériel
 
 - [ ] Appareil exact (modèle, EAN, nom Tuya) relié à la précédente analyse LAN.
