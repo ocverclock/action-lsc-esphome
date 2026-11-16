@@ -2,7 +2,7 @@
 
 Procédure **reproduite sur une prise Action/LSC 3202088.1** pour remplacer Tuya par ESPHome et piloter l'appareil en local avec Home Assistant, y compris lorsque l'accès Internet est coupé (objectif à vérifier par un test WAN bloqué).
 
-> **État au 14 novembre 2026** : la prise pilote est convertie et exploitable en ESPHome (BK7238, relais, bouton, interface Web, Wi‑Fi). **L'étalonnage BL0937 et le test d'autonomie WAN restent à valider**. Les autres modèles, notamment la multiprise, **ne sont pas encore convertis**. Ne pas flasher un modèle sur la seule ressemblance commerciale.
+> **État au 16 novembre 2026** : la prise pilote BK7238 est convertie (étalonnage BL0937 et autonomie WAN toujours à valider). La **multiprise LSC 5225000500 CB3S/BK7231N a également été flashée sous ESPHome** : sauvegarde Tuya vérifiée en double, quatre relais et bouton P10 fonctionnels, LED du bouton confirmée sur **P23**, OTA Wi-Fi réussi. La **dernière V3** a passé la validation indiquée par l'utilisateur, mais son flash et sa recette complète ne sont **pas encore confirmés**. [Retour d'expérience détaillé](docs/10-retour-experience-multiprise-5225000500.md). Ne pas généraliser le brochage à d'autres révisions.
 
 ## Matériel et statut
 
@@ -10,7 +10,7 @@ Procédure **reproduite sur une prise Action/LSC 3202088.1** pour remplacer Tuya
 | --- | --- | --- | --- |
 | Prise avec mesure, pilote | Action **3202088.1** / LSC **5225000301** / EAN **8712879165972** | **BK7238 confirmé par Kickstart**, module T1-2S-NL concordant avec l'exemplaire documenté ; BL0937 | **Flash UnTuyaOS3 puis ESPHome V7 réussis** ; mesure non étalonnée |
 | Autre prise avec mesure | LSC **5225000300** | Puce/révision à relever | **Non testée** |
-| Multiprise « Multiple TV » | LSC **5225000500**, quatre sorties sans compteur | Puce, firmware, GPIO, sécurité à identifier | **À étudier en dernier** |
+| Multiprise « Multiple TV » | LSC **5225000500**, quatre sorties sans compteur | **CB3S / BK7231N**, relais P14/P6/P7/P8, bouton P10, voyant P23 vérifiés sur cet exemplaire | **ESPHome flashé, OTA et commandes Web fonctionnels** ; dernières vérifications de la V3 et recette complète à terminer |
 
 ## Parcours de conversion (une prise à la fois)
 
@@ -19,12 +19,14 @@ Procédure **reproduite sur une prise Action/LSC 3202088.1** pour remplacer Tuya
 3. [Configurer Kickstart et installer ESPHome](docs/03-kickstart-esphome.md), en conservant le type de carte/partitions BK7238 Tuya.
 4. [Tester le pilotage local sans Internet](docs/04-validation-locale.md) : relais, bouton, Wi‑Fi, Home Assistant, coupures secteur.
 5. [Consulter les incidents et solutions](docs/05-depannage.md) si blocage.
-6. [Préparer la multiprise](docs/06-multiprise.md) **sans injecter le YAML de la prise simple**.
-7. [Préparer le flash série de la multiprise](docs/09-multiprise-uart-esphome.md) : identification CB3S à confirmer, **[YAML candidat 4 voies](firmware/5225000500/multiprise-tv-candidate.yaml)** (pas compilé, ni prêt à flasher sans photo du PCB).
+6. [Multiprise 4 voies : qualification et recette](docs/06-multiprise.md), **sans reprendre les GPIO de la prise simple**.
+7. [Flash série CB3S : historique et procédure](docs/09-multiprise-uart-esphome.md) ; [retour d’expérience et incidents de développement](docs/10-retour-experience-multiprise-5225000500.md) ; [YAML de référence V3 sans secrets](firmware/5225000500/multiprise-tv-selection-p23.yaml) (**configuration complète encore à éprouver après flash V3**).
 
 **Pour reproduire les étapes réseau de l'essai historique**, voir [le correctif lié à UnTuyaOS3](patches/README.md). Il concerne précisément la révision amont `14b56c3` du 29/10/2026 et une interface gérée par NetworkManager ; ne pas le réappliquer aveuglément sur les versions futures.
 
 ## Configuration ESPHome
+
+Pour la **multiprise**, lire en priorité [le retour d’expérience du 16/11/2026](docs/10-retour-experience-multiprise-5225000500.md) : il documente l’erreur d’affectation de LED P11/P23, les duplications YAML, les erreurs de scripts et la logique d’un bouton physique unique (appuis bref/long + clignotements). La [V3 publiée](firmware/5225000500/multiprise-tv-selection-p23.yaml) est un exemple **sans valeurs de secrets**, non une preuve de validation de sûreté électrique du montage.
 
 Le [firmware V7 archivé](firmware/5225000301/prise-action-test-v7.yaml) est la **base de référence de la prise pilote**, pas un firmware générique prêt à installer sur toutes les prises. Il utilise `bk72xx: board: generic-bk7238-tuya`, relais P24, bouton P26, LED P9/P11 et BL0937 SEL P1, CF P6, CF1 P8. Les secrets sont uniquement des références `!secret`, sans valeurs.
 
