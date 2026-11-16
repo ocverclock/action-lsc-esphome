@@ -137,6 +137,19 @@ L'utilisateur indique que la lecture `ltchiptool` échoue aussi après mise sous
 
 **État :** niveau TX et tension au pied du CB2S non encore mesurés ; ne pas multiplier les resets ni supposer que le niveau logique est bon au seul vu de la boucle locale réussie.
 
+### Indice nouveau : LED visible sur la carte lors du raccordement série
+
+Le 16/11, l'utilisateur confirme avoir mesuré **3,3 V sur TX du FT232 au repos**, et signale qu'une **petite LED située sur la carte du module s'allume lorsqu'il raccorde TX et RX** au CB2S. Les tentatives de liaison BK7231N échouent toujours après reset CEN et cycle de l'alimentation externe.
+
+**Interprétation non confirmée :**
+- Si la LED s'allume **même lorsque l'alimentation 3,3 V externe du CB2S est coupée**, suspecter une alimentation parasite (« back-powering ») par la ligne UART à l'état haut via les protections d'entrée. Une LED allumée ne prouve pas un démarrage normal ; ne pas continuer à alimenter ainsi.
+- Si la LED apparaît **seulement lorsque la véritable alimentation 3,3 V est appliquée**, une liaison UART peut influencer l'état de LED/GPIO sur la carte principale, mais cela ne prouve ni le fonctionnement du bootloader ni une panne matérielle.
+- La fiche Tuya du CB2S rappelle notamment que `P10/RX1` ne doit pas être tirée au niveau haut par le circuit hôte en fonctionnement normal ; **ne pas confondre cette recommandation d'intégration avec une interdiction d'utiliser un adaptateur USB-UART pour le flash**.
+
+**Question discriminante avant nouvelle manipulation** : LED allumée avec **alimentation 3,3 V externe coupée** lorsque TX/RX + GND sont raccordés, ou uniquement lorsque le 3,3 V externe est présent ? Ne pas suggérer d'autres resets/flashes jusqu'à clarification. Ensuite, si nécessaire, mesurer le 3,3 V **directement aux pins 1/3 du CB2S** et vérifier le rôle de la LED par inspection des pistes, carte principale possiblement connectée à l'UART.
+
+**Sources :** [Datasheet CB2S Tuya](https://developer.tuya.com/en/docs/iot/cb2s-module-datasheet?id=Kafgfsa2aaypq), [Guide de flash LibreTiny](https://docs.libretiny.eu/boards/cb2s/).
+
 ## À compléter avant création du YAML matériel
 
 - [ ] Appareil exact (modèle, EAN, nom Tuya) relié à la précédente analyse LAN.
