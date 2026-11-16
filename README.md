@@ -11,7 +11,7 @@ Procédure **reproduite sur une prise Action/LSC 3202088.1** pour remplacer Tuya
 | Prise avec mesure, pilote | Action **3202088.1** / LSC **5225000301** / EAN **8712879165972** | **BK7238 confirmé par Kickstart**, module T1-2S-NL concordant avec l'exemplaire documenté ; BL0937 | **Flash UnTuyaOS3 puis ESPHome V7 réussis** ; mesure non étalonnée |
 | Autre prise avec mesure | LSC **5225000300** | Puce/révision à relever | **Non testée** |
 | Multiprise « Multiple TV » | LSC **5225000500**, quatre sorties sans compteur | **CB3S / BK7231N**, relais P14/P6/P7/P8, bouton P10, voyant P23 vérifiés sur cet exemplaire | **ESPHome flashé, OTA et commandes Web fonctionnels** ; dernières vérifications de la V3 et recette complète à terminer |
-| Nouvelle carte à identifier | Référence commerciale à rattacher à l'analyse LAN antérieure | **LN-CB2S / PCB LN-CB-2S-V1.0_20230518** ; ressemble au **Tuya CB2S / BK7231N** officiel, à confirmer par lecture série | **Aucune écriture confirmée** ; [identification et plan de sauvegarde UART](docs/11-identification-ln-cb2s-2026-11-16.md) |
+| Nouvelle carte à identifier | Référence commerciale à rattacher à l'analyse LAN antérieure | **Module CB2S identifié visuellement**, PCB **LN-CB-2S-V1.0_20230518** ; cible **BK7231N / cb2s** | **Sauvegarde UART à effectuer, aucune écriture confirmée** ; [identification et plan de sauvegarde UART](docs/11-identification-ln-cb2s-2026-11-16.md) |
 
 ## Parcours de conversion (une prise à la fois)
 
@@ -22,7 +22,7 @@ Procédure **reproduite sur une prise Action/LSC 3202088.1** pour remplacer Tuya
 5. [Consulter les incidents et solutions](docs/05-depannage.md) si blocage.
 6. [Multiprise 4 voies : qualification et recette](docs/06-multiprise.md), **sans reprendre les GPIO de la prise simple**.
 7. [Flash série CB3S : historique et procédure](docs/09-multiprise-uart-esphome.md) ; [retour d’expérience et incidents de développement](docs/10-retour-experience-multiprise-5225000500.md) ; [YAML de référence V3 sans secrets](firmware/5225000500/multiprise-tv-selection-p23.yaml) (**configuration complète encore à éprouver après flash V3**).
-8. [Nouvelle carte LN-CB2S : identification CB2S et plan de lecture UART sans écriture](docs/11-identification-ln-cb2s-2026-11-16.md). La **référence commerciale** et les GPIO réels restent à confirmer avant tout flash.
+8. [Nouvelle carte LN-CB2S : CB2S confirmé visuellement et plan de sauvegarde UART](docs/11-identification-ln-cb2s-2026-11-16.md). La **référence commerciale** et les GPIO réels restent à confirmer avant tout flash.
 
 **Pour reproduire les étapes réseau de l'essai historique**, voir [le correctif lié à UnTuyaOS3](patches/README.md). Il concerne précisément la révision amont `14b56c3` du 29/10/2026 et une interface gérée par NetworkManager ; ne pas le réappliquer aveuglément sur les versions futures.
 
