@@ -107,13 +107,13 @@ import serial
 p = serial.Serial('/dev/ttyUSB0', 115200, timeout=1,
                   xonxoff=False, rtscts=False, dsrdtr=False)
 p.reset_input_buffer()
-p.write(b'CB2S-TEST\\r\\n')
-print(repr(p.read(11)))
+p.write(b'CB2S-TEST')
+print(repr(p.read(9)))
 p.close()
 PY
 ```
 
-**Attention :** la commande ci-dessus doit afficher `b'CB2S-TEST\\r\\n'` si la boucle série fonctionne. Si elle n'affiche rien, vérifier le port, les fils et le FT232 avant tout retour au CB2S. Si elle fonctionne, rebrancher TX/RX croisés sur les véritables **P10/RX1 et P11/TX1**, vérifier tension au pied du module sous charge ainsi que l'absence de collision éventuelle avec un MCU de la carte principale.
+**Attention :** la commande ci-dessus doit afficher `b'CB2S-TEST'` si la boucle série fonctionne. Si elle n'affiche rien, vérifier le port, les fils et le FT232 avant tout retour au CB2S. Si elle fonctionne, rebrancher TX/RX croisés sur les véritables **P10/RX1 et P11/TX1**, vérifier tension au pied du module sous charge ainsi que l'absence de collision éventuelle avec un MCU de la carte principale.
 
 **Broches de contrôle :** `CTS` ne sert pas au reset ; certains FT232 exposent aussi `RTS`, qu'un logiciel peut utiliser pour déclencher CEN (optionnel, **uniquement après vérification de la polarité et des niveaux logiques**). Cela n'est pas requis pour une sauvegarde manuelle.
 
