@@ -41,6 +41,21 @@ D'après le [datasheet officiel ESP32-C6](https://documentation.espressif.com/es
 - Avant toute commande de portail : essais sans moteur, état inactif au power-on, brownout/reset, OTA et perte de Wi-Fi, et vérification de la durée d'impulsion.
 - Pour l'instant, **V1 n'active aucun GPIO** ; cela ne constitue pas une garantie matérielle si une entrée U1 est laissée flottante.
 
+## Question complémentaire : GPIO3/4/5/6 du C6
+
+Référence : [fiche technique ESP32-C6 §2.3.4 et §3](https://documentation.espressif.com/esp32-c6_datasheet_en.html) et [schéma de référence Espressif — strapping](https://docs.espressif.com/projects/esp-hardware-design-guidelines/en/latest/esp32c6/schematic-checklist.html).
+
+| GPIO C6 | Contrainte | Décision |
+| --- | --- | --- |
+| **3** | GPIO ordinaire, ni JTAG ni strapping | Prioritaire pour une ligne de contrôle après vérification électrique |
+| **4** | MTMS / JTAG **et strapping** de configuration horloge SDIO | Éviter pour notre montage |
+| **5** | MTDI / JTAG **et strapping** de configuration horloge SDIO | Éviter pour notre montage |
+| **6** | MTCK / JTAG, **pas strapping** | Possible si le JTAG sur broches n'est pas utilisé, à éviter en premier choix |
+
+Les GPIO4/5 sont bien des strapping pins **mais pas les broches principales de sélection du mode boot** : cette dernière est liée à GPIO8/9. Ne pas confondre les deux notions.
+
+**Aucune broche n'est garantie sans effet sur les relais pendant un boot/reset** tant que la tension et les résistances de rappel de la carte KG21WF+RF n'ont pas été mesurées. La V1 C6 ne déclare aucun GPIO actif ; toute future affectation sera testée indépendamment avant la soudure définitive.
+
 ## Étapes suivantes
 
 1. Vérifier que la carte est bien **ESP32-C6 Super Mini**, et localiser physiquement IO0/1/2/3/14 (pas uniquement selon la photo d'un autre fabricant).
