@@ -42,6 +42,23 @@ L'utilisateur a appairé une **seconde télécommande sur Learn 2** et a constat
 **Précondition impérative :** vérifier par mesure/inspection que le réseau P26 de la carte est une LED dotée d'une **résistance série** et n'est pas une sortie de l'Holychip U1 ou une autre charge ; **même un GPIO non-strapping peut endommager un circuit s'il attaque une autre sortie**. Ne pas raccorder la motorisation aux relais pour ces essais. Ce firmware est **archivé sans compilation ni validation sur le matériel**.
 
 
+## Correction : essais déjà réalisés et résultats validés
+
+**Ne pas répéter l'essai LED.** D'après les essais remontés par l'utilisateur :
+- Le bouton **TEST WF-LED seule** sur **P26/GPIO19** donne **un flash bleu bref puis extinction** : fonctionnement validé.
+- Les essais de commandes **P7/GPIO2 et P10/GPIO18** avec **impulsions de 100 ms** font flasher la LED bleue mais **aucun des deux relais ne claque** : ces broches ne sont **pas validées comme commandes directes**, et l'impulsion LED est déclenchée par le programme, non une preuve de relais.
+- Par télécommande, le relais 1 fait réagir **P6/GPIO3**, le relais 2 **P8/GPIO1**, avec impulsion active bas d'environ 0,1 s ; les relais réagissent bien aux ordres RF.
+
+**Prochaine question à résoudre** : P6 et P8 sont-ils des **sorties d'état du Holychip**, des entrées de commande, ou des lignes communes bidirectionnelles ? Ne **pas** convertir GPIO3/GPIO1 en sorties push-pull ; risque d'opposition électrique avec U1.
+
+### Essai ciblé sur P6, avant toute modification YAML
+- Moteur/automatisme entièrement déconnecté, carte sur alimentation basse tension **isolée** et correctement limitée en courant ; confirmer la tension de repos de **P6 à GND** au multimètre : elle doit être dans la plage 0–3,3 V compatible C6.
+- Si niveau de repos stable et compatible, **tester brièvement un rappel faible à la masse à travers une résistance série de 4,7 kΩ** directement entre **P6 côté circuit** et GND, tout en observant relais 1 et LED RF. Le test **n'est pas** un court-circuit franc ; si P6 est une sortie forte, la résistance limite le courant à ~0,7 mA à 3,3 V, mais le résultat peut ne pas franchir le seuil logique, donc **un échec est non concluant**.
+- Mesurer la tension de P6 pendant ce rappel. Une résistance 4,7 kΩ ne protège pas contre une erreur de masse, l'application secteur, ou un circuit exposé à du 5 V : **abandonner si les tensions ne sont pas connues et isolées**.
+- **Ne pas recâbler la sortie C6** pendant ce test ; GPIO3 reste configuré **INPUT** dans le YAML pour observer l'état.
+- Selon résultat, envisager un essai symétrique P8, puis seulement créer V5 de commandes conditionnées en open-drain, en sécurisant les états au démarrage.
+
+
 ## Essais recommandés, en conservant les relais et le garage hors charge
 
 1. Conserver **GPIO3 en entrée haute impédance**, sans pull-up/down, dans la V2.
