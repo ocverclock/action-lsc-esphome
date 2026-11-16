@@ -59,6 +59,22 @@ L'utilisateur a appairé une **seconde télécommande sur Learn 2** et a constat
 - Selon résultat, envisager un essai symétrique P8, puis seulement créer V5 de commandes conditionnées en open-drain, en sécurisant les états au démarrage.
 
 
+## V5 demandée — impulsion brève sur P8, sans présumer de sa fonction
+
+L'utilisateur demande explicitement de générer une impulsion sur **P8 du CB2S**, aujourd'hui raccordé à **GPIO1 de l'ESP32-C6**. Bien que **P8 réagisse lui-même à la commande du canal RF2**, sa direction reste inconnue : **une ligne qui réagit comme sortie de statut n'est pas forcément une entrée de commande**.
+
+Nouvelle version expérimentale : [garage-wifi-c6-v5-test-p8.yaml](../firmware/hfy-kg21wf-rf/garage-wifi-c6-v5-test-p8.yaml), **non compilée ni testée sur le matériel**.
+
+- **GPIO1/P8** configuré en sortie **open-drain, inverted**, repos haute impédance, impulsion **LOW 80 ms** sur un bouton de test.
+- Bouton `TEST P8 - impulsion 80 ms` disponible dans HA **uniquement fonctionnel si armement `AUTORISER test P8 (banc uniquement)` activé** ; armement OFF par défaut et au redémarrage.
+- Le `binary_sensor` **P8** est **retiré** : ESPHome ne peut pas utiliser simultanément GPIO1 comme entrée `binary_sensor` et sortie `output` ; les autres GPIO P6/P7/P10/P24 restent en lecture.
+- P26/GPIO19 conserve la fonction LED avec flash lors du bouton d'essai. Aucun P7 ni P10 n'est piloté en V5.
+- **Condition matérielle impérative** : carte motorisation déconnectée, alimentation de banc isolée, vérification P8 dans 0–3,3 V, **intercaler une résistance 4,7 kΩ en série entre le fil GPIO1 et P8 avant essai** (l'utilisateur avait auparavant une liaison directe), masse commune. La résistance limite le courant potentiel d'opposition, ne garantit pas compatibilité logique ni sécurité.
+- Pendant boot/OTA, aucun relais ne doit s'actionner. Si P8 ne donne aucune réaction, **ne pas augmenter arbitrairement la durée ou la force de commande** : cela suggère que P8 est peut-être un retour d'état ; reprendre les mesures du circuit.
+
+**Cet essai ne doit être utilisé que pour le diagnostic sur banc** ; la réussite ou l'échec ne remplace pas le relevé du schéma logique ni la vérification d'entrée/sortie du Holychip.
+
+
 ## Essais recommandés, en conservant les relais et le garage hors charge
 
 1. Conserver **GPIO3 en entrée haute impédance**, sans pull-up/down, dans la V2.
