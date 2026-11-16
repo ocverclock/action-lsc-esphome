@@ -34,6 +34,22 @@ L'utilisateur mesure environ **3 V arrivant sur l'ESP32-C6**, mais ne voit **pas
 - **Avant de reconnecter des GPIO :** mesurer les niveaux des fils **côté U1 avec un instrument approprié et une alimentation basse tension isolée**, confirmer **pas de 5 V** sur les entrées C6 et que les signaux ne sont pas activement conduits par les deux côtés ; s'assurer que les sorties CH1/CH2 n'ont aucune charge mécanique raccordée.
 - Après identification, reconnecter **un seul signal à la fois**, vérifier boot puis garder la logique de portail inerte au reset, brownout et OTA.
 
+## Nouveau résultat utilisateur : fonctionnement obtenu en alimentant la Super Mini en 5 V
+
+L'utilisateur a remplacé son alimentation auparavant mesurée ~3 V et constate que **l'ESP32-C6 s'allume en prenant l'alimentation sur un rail de 5 V**. **Cela ne prouve pas encore** que le Wi-Fi reste stable ni que le régulateur 3,3 V de la Super Mini a été correctement câblé :
+
+- **Impératif : le 5 V va uniquement sur `5V` (ou `VIN` si c'est bien le marquage de son module), jamais sur `3V3`, un GPIO, ni directement sur une entrée 3,3 V du contrôleur.**
+- Contrôler réellement **3V3 ↔ GND** sur le C6 en fonctionnement et l'absence de reset Wi-Fi ; ne pas mettre à la fois USB-C et alimentation externe si leur protection anti-retour n'est pas établie.
+- La Super Mini reçoit déjà six fils **P10→18, P24→0, P26→19, P6→3, P7→2, P8→1** ; chaque niveau **sur les fils venant de U1** doit être **0–3,3 V** avant toute déclaration en entrée ESPHome. Une entrée du C6 **n'est pas tolérante au 5 V**.
+- Le test RF de la carte mère doit s'effectuer **sans moteur ni charge dangereuse**.
+
+### Firmware proposé pour l'étape suivante
+
+[Firmware V2 : observation GPIO exclusivement en entrées haute impédance, sans pull-up/pull-down](../firmware/hfy-kg21wf-rf/garage-wifi-c6-v2-observation.yaml). Cette version reprend la configuration C6 Wi-Fi connue, le nom `garage-wifi-c6` et les secrets historiques `garage_c3_*` et publie dans HA six capteurs de niveau **P10/P24/P26/P6/P7/P8**. Elle journalise les fronts montant/descendant (`on_press`/`on_release`) ; cela n'est **pas** un analyseur de protocole série et des impulsions rapides peuvent ne pas être visibles.
+
+**Aucune sortie de commande n'est activée** : le rôle, la polarité et la direction des lignes du contrôleur HC89S003A sont encore inconnus. Aucun code ne peut garantir un actionnement sûr du garage sur ces six lignes avant cartographie et mesure électrique. Les commandes d'essai à impulsion devront être ajoutées uniquement sur les lignes prouvées entrées de U1, avec durée bornée et état de repos sûr, moteur déconnecté.
+
+
 ## Priorité et sources
 
 **Ne pas changer le YAML immédiatement.** Le firmware V1.1 ne déclare aucun GPIO physique et le C6 fonctionnait en Wi-Fi avant soudure. Priorité à l'alimentation/masse/soudure et à l'isolation des six signaux.
