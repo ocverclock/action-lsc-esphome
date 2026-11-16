@@ -78,7 +78,7 @@ L'absence d'un lien UART réussi ne doit pas conduire à forcer le flash, change
 
 ## Incident initial : échec de liaison UART (16/11/2026)
 
-**Observation utilisateur :** alimentation stabilisée 3,3 V jugée correcte, TX et RX câblés ; plusieurs tentatives de lecture `ltchiptool` ont échoué malgré des contacts CEN–GND. Aucun dump réussi ; **message d'erreur exact non encore fourni**.
+**Observation utilisateur :** alimentation stabilisée 3,3 V jugée correcte, TX et RX câblés ; plusieurs tentatives de lecture `ltchiptool` ont échoué malgré des contacts CEN–GND. Aucun dump réussi. **Message exact désormais fourni :** `TimeoutError: Timed out attempting to link with chip` dans `bk7231tools/serial/linking.py`, ligne 23. Ce message signifie qu'aucune négociation bootloader série n'a abouti ; il ne permet pas, seul, d'incriminer le timing, le firmware ou le chipset.
 
 **Point clarifié :** `CTS` sur l'adaptateur FT232 est le signal de contrôle de flux série, **pas** le reset de la puce. Ne pas le connecter à CEN, ni chercher à piloter CEN via CTS. Le reset est la broche **CEN du CB2S** reliée brièvement à **GND**.
 
@@ -91,6 +91,33 @@ L'absence d'un lien UART réussi ne doit pas conduire à forcer le flash, change
 6. N'effectuer **aucune écriture** tant que la première lecture de 2 MiB n'a pas fonctionné, puis la seconde lecture identique.
 
 **Références techniques :** [LibreTiny CB2S quick flashing guide](https://docs.libretiny.eu/boards/cb2s/#quick-flashing-guide), [LibreTiny BK72xx flashing, reset CEN et alimentation](https://docs.libretiny.eu/docs/platform/beken-72xx/#flashing), [Guide BK7231GUIFlashTool — alternative reset par coupure/alimentation 3,3 V](https://github.com/openshwprojects/BK7231GUIFlashTool#detailed-usage-instructions-bk72xx).
+
+
+### Diagnostic ciblé après le timeout
+
+**Ne pas lancer de `flash write`.** Vu les multiples tentatives de CEN déjà effectuées, passer à un test qui distingue un défaut du câble/adaptateur d'un défaut côté CB2S :
+
+1. Couper l'alimentation 3,3 V et **déconnecter totalement TX/RX du CB2S** (jamais de secteur).
+2. Raccorder **ensemble les deux extrémités des fils TX et RX côté module** (test de boucle locale de toute la liaison), le FT232 restant raccordé au PC.
+3. Dans le venv où `pyserial` est installé, lancer :
+
+```bash
+python - <<'PY'
+import serial
+p = serial.Serial('/dev/ttyUSB0', 115200, timeout=1,
+                  xonxoff=False, rtscts=False, dsrdtr=False)
+p.reset_input_buffer()
+p.write(b'CB2S-TEST\\r\\n')
+print(repr(p.read(11)))
+p.close()
+PY
+```
+
+**Attention :** la commande ci-dessus doit afficher `b'CB2S-TEST\\r\\n'` si la boucle série fonctionne. Si elle n'affiche rien, vérifier le port, les fils et le FT232 avant tout retour au CB2S. Si elle fonctionne, rebrancher TX/RX croisés sur les véritables **P10/RX1 et P11/TX1**, vérifier tension au pied du module sous charge ainsi que l'absence de collision éventuelle avec un MCU de la carte principale.
+
+**Broches de contrôle :** `CTS` ne sert pas au reset ; certains FT232 exposent aussi `RTS`, qu'un logiciel peut utiliser pour déclencher CEN (optionnel, **uniquement après vérification de la polarité et des niveaux logiques**). Cela n'est pas requis pour une sauvegarde manuelle.
+
+**Ensuite seulement :** retenter une seule lecture avec remise sous tension 3,3 V pendant la phase `Connecting`, ou contact CEN–GND puis relâchement, pour identifier si le problème était le reset.
 
 ## À compléter avant création du YAML matériel
 
