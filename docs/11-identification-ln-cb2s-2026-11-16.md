@@ -172,6 +172,20 @@ Le 16/11/2026, l'utilisateur a fourni **cinq photos** de la carte complète, sou
 **Décision :** pas de `flash write`, pas de cavalier RTS/CTS/CEN improvisé et pas de configuration GPIO ESPHome tant que l'origine des `TimeoutError` n'est pas expliquée.
 
 
+### 16/11 — masse du module isolée de la carte mère, nouvelle tentative infructueuse
+
+**Observation utilisateur :** après avoir interrompu le **contact GND entre le module CB2S et sa carte mère**, la `POWER-LED` de la carte mère ne s'allume plus lorsque le FT232 est connecté. La **lecture de la flash BK7231N échoue toujours**.
+
+**Interprétation :** l'extinction de cette LED montre seulement que son chemin de courant a été modifié ; elle ne prouve ni un démarrage correct du CB2S ni la disparition de toute alimentation parasite par d'autres GPIO. Le test de boucle locale FT232 était bon et son TX au repos mesuré à ~3,3 V.
+
+**Point critique avant tout autre essai UART :** il faut une référence **GND commune sur le module** entre 1) borne négative de l'alimentation 3,3 V externe, 2) GND du FT232 et 3) **GND/broche 3 du CB2S**. La séparation GND du module et de la carte mère ne doit pas rompre ce triangle. **Ne pas alimenter et tester un montage dont le module n'a pas sa masse commune avec l'alimentation/le FT232.** Si la masse du module n'est plus fiable, suspendre le test.
+
+**Contrôle prioritaire demandé :** alimentations secteur/bornier AC-DC toutes absentes ; alimentation externe 3,3 V seule active ; relever au multimètre la tension **directement entre la broche 1 (3V3) et la broche 3 (GND) du CB2S**, sous cette alimentation. Résultat attendu ~3,3 V ; **ne pas inférer la tension du module d'une LED sur la carte mère ou d'une mesure à la sortie du régulateur**. Pour éviter un court-circuit, mesurer avec pointes isolées et accès fiable ; interrompre si accès dangereux.
+
+**Précaution de conception :** sur une carte mère multi-circuits, couper seulement GND en laissant d'autres signaux interconnectés peut créer des retours parasites via GPIO ; ne pas considérer cet isolement partiel comme une solution validée. Relever exactement quelle liaison physique a été interrompue avant de définir une procédure stable.
+
+**Aucun flash ni effacement réalisé.**
+
 ## À compléter avant création du YAML matériel
 
 - [ ] Appareil exact (modèle, EAN, nom Tuya) relié à la précédente analyse LAN.
