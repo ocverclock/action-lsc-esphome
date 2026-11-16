@@ -199,6 +199,40 @@ L'utilisateur précise que la déconnexion de **GND entre le CB2S et la carte pr
 
 **Réserve importante :** le module reste physiquement soudé à la carte principale sur d'autres broches ; **couper seulement GND n'assure pas une véritable isolation** et peut permettre des retours par GPIO/diodes de protection. Ne pas conseiller de couper d'autres pistes au hasard. Mesurer d'abord la tension réelle entre 3V3 et GND **au niveau du CB2S** ; si elle est correcte et stable, identifier les points UART réels et les liaisons résiduelles avec la carte principale avant d'autres tentatives.
 
+## Recherche de retours d'expérience publics sur les timeouts CB2S/BK7231N (16/11/2026)
+
+**Question de départ :** pourquoi `ltchiptool flash read -d /dev/ttyUSB0 bk7231n ...` échoue-t-il avec `TimeoutError: Timed out attempting to link with chip` alors que la boucle FT232 est OK, TX au repos est mesuré à 3,3 V, les resets CEN et les cycles 3,3 V ont été tentés et l'utilisateur a déconnecté le **GND entre module et carte mère**, sans succès ?
+
+### Cas publics recoupés
+
+| Source | Problème observé | Résultat | Enseignement pour KG21WF+RF |
+| --- | --- | --- | --- |
+| [Elektroda 3951003, 21–26/01/2023](https://www.elektroda.com/rtvforum/topic3951003.html) | CB2S/BK7231N ne négocie pas UART sur PCB à relais ; RX/TX utilisés par la logique du relais | **Résolu** par dessoudage et programmation de la carte CB2S seule, succès confirmé par l'auteur au post #10 | **Très pertinent :** couper seulement GND de la carte mère ne libère pas RX1/TX1, encore reliés aux autres circuits |
+| [Elektroda / KMC 30153, 24/02/2023](https://www.elektroda.com/news/news3960117.html) | ~60 tentatives série infructueuses ; TX1 du CB2S maintenu haut par un bouton | Conversion **OTA** réussie ; le correctif UART (isoler le bouton) est expliqué mais **non testé** dans cet article | Les broches peuvent être bloquées électriquement même quand l'UART FT232 fonctionne seul |
+| [Elektroda 4024088, 26–27/12/2023](https://www.elektroda.com/rtvforum/topic4024088.html) | Module CB2S dessoudé ne répond pas ; sérigraphie trompeuse 3V3/GND | **Résolu** après correction du brochage, premier essai réussi | Vérifier les véritables points 3V3/GND et P10/P11 au multimètre, ne pas se fier à une LED de carte mère |
+| [Elektroda 3977701, 13/05/2023](https://www.elektroda.com/rtvforum/topic3977701.html) | Variante CB2S dont RX est relié à GND sur PCB, empêche l'accès UART | L'auteur décrit avoir séparé **la soudure de RX** vers la carte mère à la tresse, sans déposer tout le module | Une **isolation ciblée de RX1/P10** peut suffire si une liaison à la carte mère est démontrée ; ne pas sectionner au hasard |
+| [LibreTiny libretiny #181](https://github.com/libretiny-eu/libretiny/issues/181) | Timeout sous `ltchiptool` ; outils série se comportent différemment | `bk7231tools` a fonctionné sur un montage de l'auteur, qui était un **autre Beken** ; question du port `ttyUSB0` / `ttyUSB1` soulevée | Option secondaire **une fois le câblage validé**, pas une preuve d'incompatibilité CB2S avec ltchiptool |
+| [BK7231GUIFlashTool README](https://github.com/openshwprojects/BK7231GUIFlashTool#detailed-usage-instructions-bk72xx) | Synchronisation bootloader délicate | Recommande reset CEN ~0,25 s ou cycle d'alimentation, signaux UART 3,3 V | Déjà essayé dans notre montage, priorité désormais faible |
+| [LibreTiny CB2S officiel](https://docs.libretiny.eu/boards/cb2s/#quick-flashing-guide) | Procédure et pinout du CB2S | **P10/RX1 ← TX FT232 ; P11/TX1 → RX FT232 ; CEN reset ; BK7231N ; 2 MiB** | Confirme le choix de plateforme, **pas le câblage des circuits de la carte mère** |
+
+### Conclusion applicable à notre carte
+
+La première hypothèse à contrôler est **une collision ou un biais électrique sur P10/RX1 ou P11/TX1 entre le CB2S et l'autre électronique de la KG21WF+RF** (microcontrôleur RF, boutons, résistances/capacités), **plus vraisemblable qu'un problème de timing** compte tenu des essais déjà faits. Ce n'est qu'une hypothèse, pas une panne démontrée.
+
+**Protocole de diagnostic conseillé sans écriture :**
+
+1. Tous borniers AC-DC sans alimentation, alimentation externe 3,3 V du module et USB FT232 débranchés. Photographier les points soudés du CB2S, puis identifier physiquement **P10/RX1 et P11/TX1** sur la carte fille **selon le pinout LibreTiny**, à l'aide d'une vérification de continuité des pistes.
+2. Vérifier **la masse commune CB2S ↔ source 3,3 V ↔ FT232**, ainsi que 3,3 V **directement entre les points VCC et GND du CB2S**. Le retrait de GND **vers la carte mère** n'a pas la même utilité que le retrait d'une connexion RX1 ou TX1 ; il peut au contraire créer des retours indésirables via les signaux restant reliés à la carte.
+3. Hors tension, contrôler à l'ohmmètre si **P10/RX1 est en court-circuit franc vers GND**, si P11/TX1 est associé à une charge directe suspecte et si ces deux lignes rejoignent la logique de la carte mère. Mesures au multimètre seules non suffisantes pour exclure toutes les interférences.
+4. **Si une connexion perturbatrice est établie**, privilégier une **déconnexion réversible des seules soudures de P10/RX1 et/ou P11/TX1 vers la carte mère**, par un intervenant compétent ; maintenir le GND de référence du module et de l'alimentation et éviter de créer un module flottant sur d'autres GPIO. Ne pas couper des pistes au hasard ni transférer le brochage d'un autre CB2S.
+5. Si les soudures sont inaccessibles, évaluer le dessoudage de la **carte fille entière** plutôt qu'un isolement partiel GND sur une carte complexe. Sécurité : **aucune alimentation secteur** pendant cette intervention ; vérifier absence de charge résiduelle dans les condensateurs.
+6. Une fois l'UART réellement libéré et les points validés, réessayer **une lecture seule** `ltchiptool` à 115200 puis une seconde sauvegarde identique. **Ne pas** utiliser l'action BK7231GUIFlashTool « Backup and flash new » qui **écrit automatiquement** après la sauvegarde.
+
+**Ordre de priorité :** vérification physique des points et des liaisons P10/P11 > bon GND/3,3 V au module > libération propre des pistes RX/TX si nécessaire > essai de lecture avec autre utilitaire > essais de reset supplémentaires.
+
+**Interdit à ce stade :** `flash write`, effacement sans sauvegarde, exposition des clés Tuya, branchement USB/FT232 sur un appareil relié au 230 V.
+
+
 ## À compléter avant création du YAML matériel
 
 - [ ] Appareil exact (modèle, EAN, nom Tuya) relié à la précédente analyse LAN.
