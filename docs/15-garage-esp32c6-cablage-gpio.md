@@ -56,6 +56,24 @@ Les GPIO4/5 sont bien des strapping pins **mais pas les broches principales de s
 
 **Aucune broche n'est garantie sans effet sur les relais pendant un boot/reset** tant que la tension et les résistances de rappel de la carte KG21WF+RF n'ont pas été mesurées. La V1 C6 ne déclare aucun GPIO actif ; toute future affectation sera testée indépendamment avant la soudure définitive.
 
+## 16/11 — options GPIO sur l'autre côté de la C6 Super Mini
+
+Sur une **version courante** de carte C6 Super Mini (vue du dessus, USB-C en haut, sérigraphies à confirmer sur l'exemplaire), les broches du **côté opposé aux GPIO0 à GPIO7** sont : `5V`, `GND`, `3V3`, `GPIO20`, `GPIO19`, `GPIO18`, `GPIO15`, `GPIO14`, `GPIO9`, `GPIO8` ; certaines autres sont sur **pastilles centrales** (`GPIO21/22/23`, ainsi que les connexions USB `GPIO12/13`). Cela dépend du fabricant et de la révision PCB, d'où la nécessité de vérifier la sérigraphie réelle.
+
+| GPIO côté opposé | Verdict |
+|---|---|
+| **20, 19, 18** | Choix privilégiés : GPIO généraux, ni strapping, ni USB natif, ni UART0 |
+| **14** | Bon candidat **uniquement si physiquement exposé et disponible** sur la variante montée |
+| **15** | **Strapping** + LED sur certains modèles, à éviter |
+| **9** | **Strapping/BOOT**, à éviter |
+| **8** | **Strapping/LED RGB** sur certains modèles, à éviter |
+| **12 et 13** | USB D− / D+, ne pas utiliser pour les commandes |
+| **21, 22, 23** | Autres GPIO candidats si les pastilles internes existent et restent accessibles |
+
+Pour **le garage**, on préfère toujours les GPIO qui n'affectent pas le boot : `0,1,2,3` sur un bord et `18,19,20` (+ `14` si présent) sur l'autre. **Aucune promesse d'absence de déclenchement de relais au boot** n'est possible sans connaître le circuit Holychip, le sens des signaux, les pull-ups/pull-downs et la tension réelle. Les affectations historiques **P6→GPIO0, P7→GPIO1, P8→GPIO2, P24→GPIO3, P26→GPIO14** restent de simples réservations, non des obligations de câblage.
+
+**Sources** : [Pinout physique C6 Super Mini (une révision courante)](https://projedefteri.com/en/blog/esp32-c6-pinout-guide/), [Espressif GPIO/strapping](https://docs.espressif.com/projects/esp-idf/en/v5.5.1/esp32c6/api-reference/peripherals/gpio.html).
+
 ## Étapes suivantes
 
 1. Vérifier que la carte est bien **ESP32-C6 Super Mini**, et localiser physiquement IO0/1/2/3/14 (pas uniquement selon la photo d'un autre fabricant).
