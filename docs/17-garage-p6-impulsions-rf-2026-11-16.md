@@ -26,6 +26,22 @@ L'export comporte 52 événements au total, dont **14 transitions OFF→ON** de 
 - Autre possibilité : ligne de statut de relais, signal multiplexé/retour, ou circuit câblé partagé. Identifier la topologie électrique avant simulation.
 - La durée d'environ 112 ms est issue de l'historique HA et inclut le polling/horodatage logiciel ; ce n'est pas une mesure électronique certifiée à la milliseconde.
 
+## Complément de test utilisateur : canal Learn 2 et LED Wi-Fi
+
+L'utilisateur a appairé une **seconde télécommande sur Learn 2** et a constaté que **P8 (ESP32-C6 GPIO1) présente le même comportement d'impulsion active bas que P6 (GPIO3)** pendant le relais du deuxième canal.
+
+**Cartographie fonctionnelle mieux étayée :**
+- **P6 → GPIO3** : impulsion active bas corrélée à l'actionnement **RF canal 1**, 102–116 ms sur historique HA du premier essai ;
+- **P8 → GPIO1** : impulsion active bas corrélée à l'actionnement **RF canal 2**, durée non encore mesurée précisément ;
+- **P7 → GPIO2** et **P10 → GPIO18** : hypothèse de l'utilisateur selon laquelle ce sont les **deux entrées de commande Wi-Fi** du Holychip ; **non confirmé**. Ces broches restent en entrées dans le firmware de diagnostic, car forcer P10 ou P7 en sortie pourrait créer un conflit avec une sortie U1 ;
+- **P24 → GPIO0** : rôle encore inconnu ;
+- **P26 → GPIO19** : utilisateur confirme le routage vers la LED `WF-LED` et demande un flash visible lorsque le C6 est connecté au Wi-Fi.
+
+**Firmware de test créé :** [V3 — LED Wi-Fi P26 sur GPIO19](../firmware/hfy-kg21wf-rf/garage-wifi-c6-v3-led-wifi.yaml). À chaque intervalle de **2 s**, si `wifi.connected`, GPIO19 active brièvement la LED pendant **150 ms**, puis l'éteint ; sinon reste inactif. Le code suppose une LED **active LOW** (`inverted: true`) ; **à vérifier avant activation matérielle**. Les cinq autres broches restent en **entrées haute impédance** pour lecture passive (pas de `switch:` relais).
+
+**Précondition impérative :** vérifier par mesure/inspection que le réseau P26 de la carte est une LED dotée d'une **résistance série** et n'est pas une sortie de l'Holychip U1 ou une autre charge ; **même un GPIO non-strapping peut endommager un circuit s'il attaque une autre sortie**. Ne pas raccorder la motorisation aux relais pour ces essais. Ce firmware est **archivé sans compilation ni validation sur le matériel**.
+
+
 ## Essais recommandés, en conservant les relais et le garage hors charge
 
 1. Conserver **GPIO3 en entrée haute impédance**, sans pull-up/down, dans la V2.
