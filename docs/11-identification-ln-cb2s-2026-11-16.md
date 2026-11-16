@@ -356,7 +356,7 @@ L'utilisateur a relevé au dos de la petite carte **`JCYD02 94V-0`**. **Ce marqu
 | Sorties | Borniers **CH1 NO/COM** et **CH2 NO/COM** : contacts normalement ouverts et communs | Séparer les contacts secs des circuits basse tension |
 | Entrée | Bornier **IN AC-DC** avec étage de redressement/régulation visible | La valeur nominale admissible d'entrée n'est **pas vérifiée** sur cet exemplaire ; ne pas injecter du 230 V ni supposer que cette borne est du 5 V |
 | Radio | Petit module RF distinct et borne `ANT` | Présence d'une fonction RF séparée ; autonomie des télécommandes **non encore prouvée** |
-| Logique | Circuit **U1 à 28 broches environ**, résistances et plusieurs boîtiers SOT-23 | Probable traitement/commande des deux sorties ; **identité et protocole non relevés** |
+| Logique | Circuit **U1 à 20 broches (TSSOP20, comptage corrigé)**, résistances et plusieurs boîtiers SOT-23 | Probable traitement/commande des deux sorties ; **identité et protocole non relevés** |
 | Test du contrôleur | 5 pastilles **GND / VCC / RST / DAT / CLK** voisines de U1 | **Ne pas traiter comme RX/TX UART** : évoquent un connecteur programmation/test dédié au contrôleur de la carte |
 | Témoins | `POWER-LED`, `RF-LED`, `WF-LED` | `POWER-LED` signale la carte mère, pas nécessairement le démarrage du CB2S |
 | Face soudures | Zone de **rangées de contacts du module vertical** et pistes fines cheminant vers la logique | Photos utiles pour orienter les tests de continuité, **insuffisantes pour attribuer les GPIO exacts** |
@@ -468,6 +468,10 @@ Si **TX1/P11** est effectivement non raccordée à U1, un protocole série UART1
 
 **Faits non encore établis :** fonction de P6/P7/P8 et de P24 ; tension **au niveau des entrées U1** ; type (push-pull/open-drain) et polarité de commande ; identité exacte du MCU U1 ; version finale du protocole. Le niveau logique 3,3 V commun des deux modules Wi-Fi ne suffit pas à les rendre directement interchangeables dans un circuit de commande de portail.
 
+
+## Identification approfondie de U1 — fiche HC89S003A et test des cinq pastilles
+
+Recherche et contrôle photographique actualisés : **U1 semble être un HC89S003A (Holychip) en TSSOP20 (10 pattes par côté)**, non un composant 28 broches. Voir le [nouveau dossier U1 : brochage et diagnostic DAT/CLK/RST/VCC/GND](12-hc89s003a-u1-brochage-et-liaison-esp32c3.md). L'identification et les connexions exactes restent à valider par continuité ; **le MCU peut être alimenté jusqu'à 5,5 V** et la tension réelle doit être mesurée avant liaison GPIO 3,3 V.
 
 ## À compléter avant création du YAML matériel
 
