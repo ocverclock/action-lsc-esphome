@@ -1,0 +1,168 @@
+# HFY-KG21WF+RF V2.0 — ESP32-C6 Super Mini
+# V6 : écoute PASSIVE de P10/GPIO18 et des retours RF, sans commande de relais.
+# Basée sur la configuration réseau/API déjà connue de la V5.
+#
+# Avant mise sous tension :
+# - Motorisation et porte de garage déconnectées ; essais sur banc.
+# - Vérifier que chaque signal côté Holychip reste entre 0 V et 3,3 V.
+# - Ancien CB2S retiré de la carte mère.
+# - C6 : 5 V uniquement sur entrée 5V de la Super Mini ; GND commun.
+# - Éviter USB + alimentation externe simultanés sans protection anti-retour vérifiée.
+#
+# P10 / RX1 du CB2S (GPIO18 côté C6) est seulement surveillé.
+# Pas de pull-up ni pull-down ; AUCUNE sortie de commande P7/P10/P6/P8/P24.
+# Un binary_sensor ESPHome ne décode pas un UART : des impulsions rapides
+# peuvent être manquées. Une absence de changements n'exclut pas un protocole.
+#
+# Câblage physique confirmé :
+# CB2S P10 -> C6 GPIO18
+# CB2S P24 -> C6 GPIO0
+# CB2S P26 -> C6 GPIO19 (LED)
+# CB2S P6  -> C6 GPIO3 (RF1)
+# CB2S P7  -> C6 GPIO2
+# CB2S P8  -> C6 GPIO1 (RF2)
+
+esphome:
+  name: garage-wifi-c6
+  friendly_name: "Garage WiFi C6"
+  comment: "KG21WF+RF V2.0 - V6 surveillance passive P10"
+  on_boot:
+    priority: -100
+    then:
+      - output.turn_off: led_wifi
+
+esp32:
+  variant: esp32c6
+  framework:
+    type: esp-idf
+
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret garage_c3_api_key
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+    encryption:
+
+wifi:
+  ssid: !secret wifi_ssid_IoT
+  password: !secret wifi_password_IoT
+  power_save_mode: NONE
+  output_power: 11dB
+
+captive_portal:
+
+web_server:
+  port: 80
+  auth:
+    username: admin
+    password: !secret garage_c3_web_password
+
+# Seule sortie : la LED bleue WF-LED déjà validée par l'utilisateur.
+output:
+  - platform: gpio
+    id: led_wifi
+    pin:
+      number: GPIO19
+      inverted: true
+
+binary_sensor:
+  - platform: status
+    name: "Connexion"
+    entity_category: diagnostic
+
+  - platform: gpio
+    name: "P10 - GPIO18 (ecoute)"
+    entity_category: diagnostic
+    pin:
+      number: GPIO18
+      mode:
+        input: true
+        pullup: false
+        pulldown: false
+    on_press:
+      - logger.log: "P10 / GPIO18 : front montant HIGH"
+    on_release:
+      - logger.log: "P10 / GPIO18 : front descendant LOW"
+
+  - platform: gpio
+    name: "RF canal 1 - P6"
+    entity_category: diagnostic
+    pin:
+      number: GPIO3
+      mode:
+        input: true
+        pullup: false
+        pulldown: false
+
+  - platform: gpio
+    name: "RF canal 2 - P8"
+    entity_category: diagnostic
+    pin:
+      number: GPIO1
+      mode:
+        input: true
+        pullup: false
+        pulldown: false
+
+  - platform: gpio
+    name: "P7 - GPIO2 (lecture)"
+    entity_category: diagnostic
+    pin:
+      number: GPIO2
+      mode:
+        input: true
+        pullup: false
+        pulldown: false
+
+  - platform: gpio
+    name: "P24 - GPIO0 (lecture)"
+    entity_category: diagnostic
+    pin:
+      number: GPIO0
+      mode:
+        input: true
+        pullup: false
+        pulldown: false
+
+script:
+  - id: flash_wf_led
+    mode: restart
+    then:
+      - output.turn_on: led_wifi
+      - delay: 150ms
+      - output.turn_off: led_wifi
+
+button:
+  - platform: template
+    name: "TEST WF-LED seule"
+    on_press:
+      - script.execute: flash_wf_led
+
+  - platform: restart
+    name: "Redemarrer ESP32"
+    entity_category: diagnostic
+
+sensor:
+  - platform: wifi_signal
+    name: "Signal WiFi"
+    update_interval: 60s
+    entity_category: diagnostic
+
+  - platform: uptime
+    name: "Temps de fonctionnement"
+    update_interval: 60s
+    entity_category: diagnostic
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "Adresse IP"
+      entity_category: diagnostic
+    ssid:
+      name: "Reseau WiFi"
+      entity_category: diagnostic
